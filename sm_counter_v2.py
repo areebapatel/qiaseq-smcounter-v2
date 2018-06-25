@@ -429,7 +429,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          else: 
             base = pileupRead.alignment.query_sequence[pileupRead.query_position] # note: query_sequence includes soft clipped bases
             bq = pileupRead.alignment.query_qualities[pileupRead.query_position]
-            incCond = bq >= minBQ and mq >= minMQPass and mismatchPer100b <= mismatchThr and hpCovered
+            incCond = bq >= minBQ and minMQPass and mismatchPer100b <= mismatchThr and hpCovered
             # count the number of low quality reads (less than Q20 by default) for each base
             if bq < 20:   # why not minBQ???!!!
                lowQReads[base] += 1
@@ -469,7 +469,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
             allBcDict[BC].add(readid)
 
          # inclusion condition. NOTE: reads with duplex tag 'NN' are dropped from analysis
-         incCond = bq >= minBQ and mq >= minMQPass and mismatchPer100b <= mismatchThr and hpCovered
+         incCond = bq >= minBQ and minMQPass and mismatchPer100b <= mismatchThr and hpCovered
 
          # constructing UMI family; this one with high quality reads only
          if incCond:
