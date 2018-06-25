@@ -12,11 +12,7 @@ from collections import defaultdict
 #-------------------------------------------------------------------------------------
 # find homopolymer sequences
 #-------------------------------------------------------------------------------------
-def findhp(bedName, outName, minLength,refg,seqType='dna'):
-   # how much to extend the roi to search for homopolymers
-   extensionLen = 0 if seqType == 'rna' else 100
-   
-   # loop over roi BED
+def findhp(bedName, outName, minLength,refg):
    outfile = open(outName, 'w')
    for line in open(bedName, 'r'):
       if line.startswith('track name='):
@@ -29,11 +25,12 @@ def findhp(bedName, outName, minLength,refg,seqType='dna'):
       # get reference base
       refseq = pysam.FastaFile(refg)
       
-      start_coord = start - 1 - extensionLen
-      if start_coord < 0:
+      if (start - 1 - 100) < 0:
          start_coord = start
+      else:
+         start_coord = start - 1 - 100
          
-      origRef = refseq.fetch(reference=chrom, start=start_coord, end=end + extensionLen)
+      origRef = refseq.fetch(reference=chrom, start=start_coord, end=end + 100)
       origRef = origRef.upper()
 
       hpL = 0
@@ -42,8 +39,8 @@ def findhp(bedName, outName, minLength,refg,seqType='dna'):
             continue
          else:
             hpLen = i - hpL 
-            realL = hpL - 1 + start - extensionLen
-            realR = i - 1  + start - extensionLen
+            realL = hpL - 1 + start - 100
+            realR = i - 1  + start - 100
             if hpLen >= minLength and realL <= end and realR >= start:
                outline = '\t'.join([chrom, str(max(realL, start)), str(min(realR, end)), 'HP', str(hpLen), '1', str(hpLen), origRef[hpL]]) + '\n'
                outfile.write(outline)
@@ -61,7 +58,6 @@ if __name__ == "__main__":
    outName = sys.argv[2]
    minLength = int(sys.argv[3])
    refg = sys.argv[4]
-   seqType = sys.argv[5]
-   findhp(bedName, outName, minLength,refg,seqType)
+   findhp(bedName, outName, minLength,refg)
 
 
