@@ -1081,11 +1081,12 @@ def main(args):
    # calculate p-value
    print("Calculating p-values at " + str(datetime.datetime.now()) + "\n")
    outfile1 = 'intermediate/nopval.' + args.outPrefix + '.VariantList.long.txt'
-   print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
    outfile2 = 'intermediate/' + args.outPrefix + '.VariantList.long.txt'
-   pValCmd = ' '.join(['Rscript', pValCode, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, str(rpb), str(args.minAltUMI)])
+   outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
+   pValCmd = ' '.join(['Rscript', pValCode, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI)])
    subprocess.check_call(pValCmd, shell=True)
+   print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
    # make VCFs
    vcfCmd = ' '.join(['python', vcfCode, args.runPath, outfile2, args.outPrefix])
