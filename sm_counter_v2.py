@@ -908,8 +908,9 @@ def main(args):
          chrom = lineList[0]
          regionStart = lineList[1]
          regionEnd = lineList[2]
-         unitLen = lineList[4]
-         repLen = lineList[5]
+         repInfo = lineList[3].split("|")
+         unitLen = lineList[1]
+         repLen = lineList[2]
          try:
             unitLen_num = float(unitLen)
          except ValueError:
@@ -928,7 +929,7 @@ def main(args):
          else:
             totalLen = str(unitLen_num * repLen_num)
             
-         repBase = lineList[-1]
+         repBase = repInfo[-1]
          repType = 'RepT'
          repRegion[chrom].append([regionStart, regionEnd, repType, totalLen, unitLen, repLen])
 
@@ -936,7 +937,8 @@ def main(args):
    srRegion = defaultdict(list)
    with open('sr.roi.bed','r') as IN:
       for line in IN:
-         [chrom, regionStart, regionEnd, repType, totalLen, unitLen, repLen, repBase] = line.strip().split()
+         [chrom, regionStart, regionEnd, repInfo] = line.strip().split()
+         [repType, totalLen, unitLen, repLen, repBase] = repInfo.strip().split("|")
          if repType == 'Simple_repeat':
             repType = 'RepS'
          elif repType == 'Low_complexity':
