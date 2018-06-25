@@ -35,6 +35,8 @@ primerTag = "pr"
 
 _num_cols_ = 38 ## Number of columns in out_long returned by the vc() function of smCounter
 
+
+
 # wrapper function for "vc()" - because Python multiprocessing module does not pass stack trace
 # from runone/smcounter.py by John Dicarlo
 #------------------------------------------------------------------------------------------------
@@ -48,14 +50,6 @@ def vc_wrapper(*args):
       raise Exception(e)
    return output
 	
-#-------------------------------------------------------------------------------------
-# set reference genome fasta and repeat BEDs
-#-------------------------------------------------------------------------------------
-def setReference(isRna):
-   refg = filePath + 'ucsc.hg19.fasta'
-   repBed = filePath + 'simpleRepeat.full.bed'
-   srBed = filePath + 'SR_LC_SL.full.bed'
-   return (refg, repBed, srBed)
    
 #-------------------------------------------------------------------------------------
 # calculate mean rpb
@@ -233,7 +227,7 @@ def isHPorLowComp(chrom, pos, length, refb, altb, refs):
 #-------------------------------------------------------------------------------------
 # function to call variants
 #-------------------------------------------------------------------------------------
-def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refg, minAltUMI, maxAltAllele):   
+def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refg, minAltUMI, maxAltAllele, isRna, ds):   
    samfile = pysam.AlignmentFile(bamName, 'rb')
 
    mtSide = 'R1' if primerSide == 'R2' else 'R2'
@@ -291,10 +285,21 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
    sMtConsByBase['T'] = 0
    sMtConsByBase['G'] = 0
    sMtConsByBase['C'] = 0
+   
+   downsamplePileupStackThr = 10 ** 5
 
    # pile up reads
    for read in samfile.pileup(region = chrom + ':' + pos + ':' + pos, truncate=True, max_depth=1000000000, stepper='nofilter'):
+      # check pielup size, downsample if above threshold
+      pileupStackSize = read.n
+      downsamplePileup = True if pileupStackSize > downsamplePileupStackThr else False
+      random.seed(pos)
+   
       for pileupRead in read.pileups:
+         # drop randomly
+         if downsamplePileup and random.randint(1, pileupStackSize) > downsamplePileupStackThr:
+            continue
+            
          # check if position not on a gap (N or intron in RNAseq)
          dropRead = False
          cigar = pileupRead.alignment.cigar
@@ -315,11 +320,10 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
                
          # check if should drop read
          if dropRead:
-            continue
-
+            continue                       
+         
          # read ID
-         qname = pileupRead.alignment.query_name
-         readid = qname
+         readid = pileupRead.alignment.query_name         
          BC = pileupRead.alignment.get_tag(mtTag)
 
          # read start and end coordinates in reference genome
@@ -501,6 +505,10 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
    allMT = len(allBcDict)
    # gradually drop 1 read MTs
    bcToKeep = []
+   
+   if isRna:
+      rbp = cvg / float(allFrag) if allFrag > 0 else 1.0
+   
    # rpb < 2: no MT is dropped
    if rpb < 2.0: 
       bcToKeep = bcDictHq.keys()
@@ -532,17 +540,22 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          pairsToDrop = set(random.sample(pairedMTs, numToDrop - singleCnt))
          oneReadMtToDrop = singleMTs.union(pairsToDrop)
       # drop 1 read MTs
-      bcToKeep = list(set(bcDictHq.keys()).difference(oneReadMtToDrop))
-      
+      bcToKeep = list(set(bcDictHq.keys()).difference(oneReadMtToDrop))      
 
    #rpb >= 3: drop all 1 read MTs;
    else:
       bcToKeep = [bc for bc in bcDictHq.iterkeys() if len(bcDictHq[bc]) >= 2]
 
-   if len(bcToKeep) <= minTotalUMI:
+   bcToKeepLen = len(bcToKeep)
+   if bcToKeepLen <= minTotalUMI:
       out_long = '\t'.join([chrom, pos, origRef] + ['0'] * (_num_cols_ - 4) + ['LM']) + '\n'
       out_bkg = ''
    else:
+      # down sample if too many UMIs
+      if isRna and bcToKeepLen > ds:
+         random.seed(pos)
+         bcToKeep = random.sample(bcToKeep, ds)
+         
       for bc in bcToKeep:
          # primer ID and direction
          bcSplit = bc.split(tagSeparator)
@@ -838,6 +851,7 @@ def argParseInit():  # this is done inside a function because multiprocessing mo
    parser.add_argument('--refGenome',type=str,help='Path to the reference fasta file')
    parser.add_argument('--repBed',type=str,help='Path to the simpleRepeat bed file')
    parser.add_argument('--srBed',type=str,help='Path to the full repeat bed file')
+   parser.add_argument('--ds', type=int, default=10000, help='down sample if number of UMIs greater than this value')
 
 #--------------------------------------------------------------------------------------
 # main function
@@ -868,8 +882,14 @@ def main(args):
    if not os.path.exists('intermediate'):
       os.makedirs('intermediate')
 
-   # intersect repeats and target regions   
-   subprocess.check_call('python ' + homopolymerCode + ' ' + args.bedTarget + ' hp.roi.bed 6' + ' ' + args.refGenome , shell=True)
+   # intersect repeats and target regions
+   if args.isRna: 
+      seqType = 'rna'
+      findHpLen = args.hpLen
+   else:   
+      seqType = 'dna'
+      findHpLen = 6
+   subprocess.check_call('python ' + homopolymerCode + ' ' + args.bedTarget + ' hp.roi.bed ' + str(findHpLen) + ' ' + args.refGenome + ' ' + seqType, shell=True)
    subprocess.check_call('bedtools intersect -a ' + args.repBed + ' -b ' + args.bedTarget + ' | bedtools sort -i > rep.roi.bed', shell=True)
    subprocess.check_call('bedtools intersect -a ' + args.srBed +  ' -b ' + args.bedTarget + ' | bedtools sort -i > sr.roi.bed', shell=True)
 
@@ -888,8 +908,9 @@ def main(args):
          chrom = lineList[0]
          regionStart = lineList[1]
          regionEnd = lineList[2]
-         unitLen = lineList[4]
-         repLen = lineList[5]
+         repInfo = lineList[3].split("|")
+         unitLen = repInfo[1]
+         repLen = repInfo[2]
          try:
             unitLen_num = float(unitLen)
          except ValueError:
@@ -899,8 +920,16 @@ def main(args):
          except ValueError:
             continue
 
-         totalLen = str(unitLen_num * repLen_num)
-         repBase = lineList[-1]
+         if args.isRna:
+            totalLen = int(regionEnd) - int(regionStart)
+            if totalLen < args.hpLen:
+               continue
+            repLen = str(totalLen / unitLen_num)
+            totalLen = str(totalLen)
+         else:
+            totalLen = str(unitLen_num * repLen_num)
+            
+         repBase = repInfo[-1]
          repType = 'RepT'
          repRegion[chrom].append([regionStart, regionEnd, repType, totalLen, unitLen, repLen])
 
@@ -908,7 +937,8 @@ def main(args):
    srRegion = defaultdict(list)
    with open('sr.roi.bed','r') as IN:
       for line in IN:
-         [chrom, regionStart, regionEnd, repType, totalLen, unitLen, repLen, repBase] = line.strip().split()
+         [chrom, regionStart, regionEnd, repInfo] = line.strip().split()
+         [repType, totalLen, unitLen, repLen, repBase] = repInfo.strip().split("|")
          if repType == 'Simple_repeat':
             repType = 'RepS'
          elif repType == 'Low_complexity':
@@ -917,6 +947,18 @@ def main(args):
             repType = 'SL'
          else:
             repType = 'Other_Repeat'
+         
+         if args.isRna:
+            totalLen = int(regionEnd) - int(regionStart)
+            if totalLen < args.hpLen:
+               continue
+            try:
+               unitLen_num = float(unitLen)
+               repLen = str(totalLen / unitLen_num)
+            except ValueError:
+               pass
+            totalLen = str(totalLen)
+         
          srRegion[chrom].append([regionStart, regionEnd, repType, totalLen, unitLen, repLen])
 
    # read in bed file and create a list of positions, annotated with repetitive region
@@ -965,34 +1007,18 @@ def main(args):
                pos += 1
 
    # calculate rpb if args.rpb = 0
-   if args.isRna:
-      rpb = -1
+   if args.rpb == 0.0:
+      rpb = getMeanRpb(args.bamFile) 
+      print("rpb = " + str(round(rpb,1)) + ", computed by smCounter")
    else:
-      if args.rpb == 0.0:
-         rpb = getMeanRpb(args.bamFile) 
-         print("rpb = " + str(round(rpb,1)) + ", computed by smCounter")
-      else:
-         rpb = args.rpb
-         print("rpb = " + str(round(rpb,1)) + ", given by user")
+      rpb = args.rpb
+      print("rpb = " + str(round(rpb,1)) + ", given by user")
       
    # set primer side
    primerSide = 'R1' if args.primerSide == 1 else 'R2'
 
-   # run Python multiprocessing module
-   pool = multiprocessing.Pool(processes=args.nCPU)
-   results = [pool.apply_async(vc_wrapper, args=(args.bamFile, x[0], x[1], x[2], x[3], x[4], x[5], args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele)) for x in locList]
-   # clear finished pool
-   pool.close()
-   pool.join()
-   # get results - a list of tuples of 2 strings
-   output = [p.get() for p in results]
-   # check for exceptions thrown by vc()
-   for idx in range(len(output)):
-      line,bg = output[idx]
-      if line.startswith("Exception thrown!"):
-         print(line)
-         raise Exception("Exception thrown in vc() at location: " + str(locList[idx]))
-
+   #----- loop over locs
+   # prepare to save to disk
    outfile_long = open('intermediate/nopval.' + args.outPrefix + '.VariantList.long.txt', 'w')
    bkgFileName = 'intermediate/bkg.' + args.outPrefix + '.txt'
    outfile_bkg = open(bkgFileName, 'w')
@@ -1002,11 +1028,54 @@ def main(args):
 
    outfile_long.write('\t'.join(header_1) + '\n')
    outfile_bkg.write('\t'.join(header_2) + '\n')
+
+   # process in chunks (for more granular logging)
+   locChunkLen = 1000
+   print "chunk size = " + str(locChunkLen)
+   locLen = len(locList)
+   locChunkCount = locLen / locChunkLen
+   if locLen % locChunkLen:
+      locChunkCount += 1
+   
+   for idx in range(locChunkCount):
+      # this chunks
+      idxStart = idx * locChunkLen
+      idxEnd = min(idxStart + locChunkLen, locLen)
+      locChunk = locList[idxStart:idxEnd]
       
-   # write output and bkg files to disk
-   for (vcOutline, bkgOutline) in output:
-      outfile_long.write(vcOutline)
-      outfile_bkg.write(bkgOutline)
+      # run Python multiprocessing module
+      pool = multiprocessing.Pool(processes=args.nCPU)
+      results = [pool.apply_async(vc_wrapper, args=(args.bamFile, x[0], x[1], x[2], x[3], x[4], x[5], args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds)) for x in locChunk]
+      
+      # clear finished pool
+      pool.close()
+      pool.join()
+      
+      # get results - a list of tuples of 2 strings
+      output = [p.get() for p in results]
+      
+      # check for exceptions thrown by vc()
+      for idx in range(len(output)):
+         line,bg = output[idx]
+         if line.startswith("Exception thrown!"):
+            print(line)
+            raise Exception("Exception thrown in vc() at location: " + str(locChunk[idx]))
+      
+      # write output and bkg files to disk, for current chunk
+      for (vcOutline, bkgOutline) in output:
+         outfile_long.write(vcOutline)
+         outfile_bkg.write(bkgOutline)
+         
+      # log some info
+      memInfo = [x for x in subprocess.check_output('free -m', shell = True).split('\n')[1].split(' ') if x.isalnum()]
+      memTotal = int(memInfo[0])
+      memUsed = int(memInfo[1])
+      memUsedPct = round(100.0 * memUsed / memTotal, 1)
+      posStart = locChunk[0][0] + ":" + locChunk[0][1]
+      posEnd = locChunk[-1][0] + ":" + locChunk[-1][1]
+      print str(datetime.datetime.now()) + "\t" + posStart + "\t" + posEnd + "\t" + str(memUsed) + "\t" + str(memUsedPct)
+      
+      del pool, results, output
 
    outfile_long.close()
    outfile_bkg.close()
