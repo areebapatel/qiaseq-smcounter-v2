@@ -909,8 +909,8 @@ def main(args):
          regionStart = lineList[1]
          regionEnd = lineList[2]
          repInfo = lineList[3].split("|")
-         unitLen = lineList[1]
-         repLen = lineList[2]
+         unitLen = repInfo[1]
+         repLen = repInfo[2]
          try:
             unitLen_num = float(unitLen)
          except ValueError:
