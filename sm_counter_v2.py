@@ -838,7 +838,7 @@ def argParseInit():  # this is done inside a function because multiprocessing mo
    parser.add_argument('--outPrefix', default=None, help='file name prefix')
    parser.add_argument('--nCPU', type=int, default=1, help='number of CPU to use in parallel')
    parser.add_argument('--minBQ', type=int, default=25, help='minimum base quality allowed for analysis')
-   parser.add_argument('--minMQ', type=int, default=50, help='minimum mapping quality allowed for analysis. If the bam is tagged with its mate's mapq, then the minimum of the R1 and R2 mapq will be used for comparison, if not each read is compared independently.')
+   parser.add_argument('--minMQ', type=int, default=50, help="minimum mapping quality allowed for analysis. If the bam is tagged with its mate's mapq, then the minimum of the R1 and R2 mapq will be used for comparison, if not each read is compared independently.")
    parser.add_argument('--hpLen', type=int, default=10, help='Minimum length for homopolymers')
    parser.add_argument('--mismatchThr', type=float, default=6.0, help='average number of mismatches per 100 bases allowed')
    parser.add_argument('--primerDist', type=int, default=2, help='filter variants that are within X bases to primer')
