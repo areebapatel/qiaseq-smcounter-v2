@@ -1170,7 +1170,7 @@ def getHpInfo(bedTarget, refGenome, isRna, hpLen):
 #----------------------------------------------------------------------------------------------
 # get tandem region information
 #------------------------------------------------------------------------------------------------
-def getTrInfo(bedTarget, repBed, isRna):
+def getTrInfo(bedTarget, repBed, isRna, hpLen):
    # intersect repeats and target regions
    subprocess.check_call('bedtools intersect -a ' + repBed + ' -b ' + bedTarget + ' | bedtools sort -i > rep.roi.bed', shell=True)
    
@@ -1189,9 +1189,9 @@ def getTrInfo(bedTarget, repBed, isRna):
          except ValueError:
             continue
 
-         if args.isRna:
+         if isRna:
             totalLen = int(regionEnd) - int(regionStart)
-            if totalLen < args.hpLen:
+            if totalLen < hpLen:
                continue
             repLen = str(totalLen / unitLen_num)
             totalLen = str(totalLen)
@@ -1208,7 +1208,7 @@ def getTrInfo(bedTarget, repBed, isRna):
 #----------------------------------------------------------------------------------------------
 # get other repeats region (simple repeats, low complexity, micro-satelites) information
 #------------------------------------------------------------------------------------------------
-def getOtherRepInfo(bedTarget, srBed, isRna):
+def getOtherRepInfo(bedTarget, srBed, isRna, hpLen):
    # intersect repeats and target regions
    subprocess.check_call('bedtools intersect -a ' + srBed +  ' -b ' + bedTarget + ' | bedtools sort -i > sr.roi.bed', shell=True)   
    
@@ -1229,7 +1229,7 @@ def getOtherRepInfo(bedTarget, srBed, isRna):
          
          if isRna:
             totalLen = int(regionEnd) - int(regionStart)
-            if totalLen < args.hpLen:
+            if totalLen < hpLen:
                continue
             try:
                unitLen_num = float(unitLen)
@@ -1328,8 +1328,8 @@ def main(args):
    
    # gather repetitive regions information
    hpRegion = getHpInfo(bedTarget, args.refGenome, args.isRna, args.hpLen)
-   repRegion = getTrInfo(bedTarget, args.repBed, args.isRna)
-   srRegion = getOtherRepInfo(bedTarget, args.srBed, args.isRna)
+   repRegion = getTrInfo(bedTarget, args.repBed, args.isRna, args.hpLen)
+   srRegion = getOtherRepInfo(bedTarget, args.srBed, args.isRna, args.hpLen)
 
    # read in bed file and create a list of positions, annotated with repetitive region
    locList = getLocList(bedTarget, hpRegion, repRegion, srRegion)
