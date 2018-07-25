@@ -707,7 +707,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
             fltrs = filters.dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt, origRef, vaf_tmp)
 
             # Initial HP and LowC region filters
-            repTypeSet, hpInfo = isHPorLowComp(chrom, pos, hpLen, ref, alt, refseq, repTypeSet, hpInfo)
+            repTypeSet, hpInfo = filters.isHPorLowComp(chrom, pos, hpLen, ref, alt, refseq, repTypeSet, hpInfo)
 
             # SNP-only common filters
             if vtype == 'SNP':
