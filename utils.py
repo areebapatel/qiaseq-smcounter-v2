@@ -75,22 +75,10 @@ def findhp(bedName, outName, minLength,refg,seqType='dna'):
 
    outfile.close()
 
+
 #-------------------------------------------------------------------------------------
-# get reverse complement of bases
+# assign genotype
 #-------------------------------------------------------------------------------------
-def reverseBase(base):
-   if base == 'A':
-      revBase = 'T'
-   elif base == 'T':
-      revBase = 'A'
-   elif base == 'G':
-      revBase = 'C'
-   elif base == 'C':
-      revBase = 'G'
-   else:
-      revBase = 'N'
-   return revBase
-   
 def assign_gt(alt,chrom,vmf):
    ''' Function for faking the Genotype i.e. GT field
    for downstream tools

@@ -60,6 +60,22 @@ def getRef(refg, chrom, pos):
    return(refseq, origRef)
 
 #-------------------------------------------------------------------------------------
+# get reverse complement of bases
+#-------------------------------------------------------------------------------------
+def reverseBase(base):
+   if base == 'A':
+      revBase = 'T'
+   elif base == 'T':
+      revBase = 'A'
+   elif base == 'G':
+      revBase = 'C'
+   elif base == 'C':
+      revBase = 'G'
+   else:
+      revBase = 'N'
+   return revBase
+   
+#-------------------------------------------------------------------------------------
 # condition to drop reads
 #-------------------------------------------------------------------------------------
 def dropRead(pileupRead, pos, cigar):
