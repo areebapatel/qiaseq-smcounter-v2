@@ -36,7 +36,11 @@ def getMeanRpb(bamName):
 #-------------------------------------------------------------------------------------
 # find homopolymer sequences
 #-------------------------------------------------------------------------------------
-def findhp(bedName, outName, minLength,refg):
+def findhp(bedName, outName, minLength,refg,seqType='dna'):
+   # how much to extend the roi to search for homopolymers
+   extensionLen = 0 if seqType == 'rna' else 100
+   
+   # loop over roi BED
    outfile = open(outName, 'w')
    for line in open(bedName, 'r'):
       if line.startswith('track name='):
@@ -49,12 +53,10 @@ def findhp(bedName, outName, minLength,refg):
       # get reference base
       refseq = pysam.FastaFile(refg)
       
-      if (start - 1 - 100) < 0:
+      start_coord = start - 1 - extensionLen
+      if start_coord < 0:
          start_coord = start
-      else:
-         start_coord = start - 1 - 100
-         
-      origRef = refseq.fetch(reference=chrom, start=start_coord, end=end + 100)
+      origRef = refseq.fetch(reference=chrom, start=start_coord, end=end + extensionLen)
       origRef = origRef.upper()
 
       hpL = 0
@@ -63,8 +65,8 @@ def findhp(bedName, outName, minLength,refg):
             continue
          else:
             hpLen = i - hpL 
-            realL = hpL - 1 + start - 100
-            realR = i - 1  + start - 100
+            realL = hpL - 1 + start - extensionLen
+            realR = i - 1  + start - extensionLen
             if hpLen >= minLength and realL <= end and realR >= start:
                outline = '\t'.join([chrom, str(max(realL, start)), str(min(realR, end)), 'HP', str(hpLen), str(realL), str(realR), origRef[hpL]]) + '\n'
                outfile.write(outline)
@@ -385,6 +387,7 @@ def getHpInfo(bedTarget, refGenome, isRna, hpLen):
    else:   
       seqType = 'dna'
       findHpLen = 6
+
    findhp(bedTarget, 'hp.roi.bed', str(findHpLen), refGenome, seqType)
    
    # gather homopolymer region info
