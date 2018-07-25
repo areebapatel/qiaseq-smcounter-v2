@@ -2,17 +2,11 @@ import os
 import sys
 import datetime
 import subprocess
-import time
 import operator
 import multiprocessing
 from collections import defaultdict
 import random
-import traceback
-
-# 3rd party modules
-import argparse
 import pysam
-import scipy.stats
 import numpy
 
 import filters
@@ -97,7 +91,7 @@ def getBasicInfo(pileupRead, bamType):
    readid = pileupRead.alignment.query_name  
 
    # if the input BAM is consensused, use read ID as UMI barcode
-   BC = pileupRead.alignment.get_tag(mtTag) if bamType == 'original' else readid
+   BC = pileupRead.alignment.get_tag(mtTag) if bamType == 'raw' else readid
  
    # CIGAR  
    cigar = pileupRead.alignment.cigar
@@ -462,7 +456,7 @@ def consensus(bcDictHqBase, bcDictAll, bc, mtThreshold, bamType):
    tmpHqBc = bcDictHqBase[bc]
    tmpAllBc = bcDictAll[bc]
    
-   if bamType == 'original':
+   if bamType == 'raw':
       consHq = consHqMT(tmpHqBc, mtThreshold)
       consAll = consAllMT(tmpAllBc, mtThreshold)
       cons = consHq if consHq == consAll else ''
@@ -561,11 +555,11 @@ def setRefAltType(origRef, origAlt):
 def umiEfficiency(hqAgree, hqDisagree, allAgree, allDisagree, origRef, origAlt, rpbCnt, alleleCnt, sMtConsByBase, cvg, sMtCons, vaf_tmp, vmf_tmp):
    hqRcAgree = hqAgree[origAlt] 
    hqRcTotal = hqRcAgree + hqDisagree[origAlt] 
-   hqUmiEff = round(1.0 * hqRcAgree / hqRcTotal, 3) if hqRcTotal > 0 else 0.0
+   hqUmiEff = 1.0 * hqRcAgree / hqRcTotal if hqRcTotal > 0 else 0.0
    
    allRcAgree = allAgree[origAlt] 
    allRcTotal = allRcAgree + allDisagree[origAlt] 
-   allUmiEff = round(1.0 * allRcAgree / allRcTotal, 3) if allRcTotal > 0 else 0.0
+   allUmiEff = 1.0 * allRcAgree / allRcTotal if allRcTotal > 0 else 0.0
 
    if sMtConsByBase[origRef] >= 3 and sMtConsByBase[origAlt] >= 3:
       refRppUmiN = sMtConsByBase[origRef]
@@ -613,6 +607,10 @@ def outlong(out_long, chrom, pos, ref, alt, vtype, origRef, origAlt, sMtCons, sM
    refRevPrimer = sMtConsByDirByBase[origRef]['R']
    altForPrimer = sMtConsByDirByBase[origAlt]['F']
    altRevPrimer = sMtConsByDirByBase[origAlt]['R']
+
+   # round hqUmiEff and allUmiEff in the end
+   hqUmiEff = round(hqUmiEff, 3)
+   allUmiEff = round(allUmiEff, 3)
 
    out_long_list = [chrom, pos, ref, alt, vtype, str(sMtCons), str(sMtConsByDir['F']), str(sMtConsByDir['R']), str(sMtConsByBase[origAlt]), str(sMtConsByDirByBase[origAlt]['F']), str(sMtConsByDirByBase[origAlt]['R']),  vmf, vmfForward, vmfReverse, str(alleleCnt[origAlt]), frac_alt, str(refForPrimer), str(refRevPrimer), primerBiasOR, pLowQ, str(hqUmiEff), str(allUmiEff), str(refRppUmiMean), str(altRppUmiMean), str(RppEffSize), repTypeFinal, hpInfo, srInfo, repInfo, str(cvg), str(allFrag), str(allMT), str(usedFrag)] + sMTs + [fltrFinal]
    out_long_allele = '\t'.join(out_long_list) + '\n'
@@ -705,7 +703,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
                   bqAlt = 1.0 * lowQReads[origAlt] / alleleCnt[origAlt]
                
             ### original BAM only filters that use UMI efficiency metrics
-            if bamType == 'original':
+            if bamType == 'raw':
                # UMI efficiency metrics; only for original BAM
                vafToVmfRatio, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize = umiEfficiency(hqAgree, hqDisagree, allAgree, allDisagree, origRef, origAlt, rpbCnt, alleleCnt, sMtConsByBase, cvg, sMtCons, vaf_tmp, vmf_tmp)
                # update HP for indel

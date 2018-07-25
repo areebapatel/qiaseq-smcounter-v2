@@ -1,7 +1,7 @@
 import os
 import sys
-import pysam
-from collections import defaultdict
+import scipy.stats
+
 
 #-------------------------------------------------------------------------------------
 # filter "LM": low coverage

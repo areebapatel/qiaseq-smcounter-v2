@@ -1,4 +1,12 @@
+#!/usr/bin/python
+# vim: tabstop=9 expandtab shiftwidth=3 softtabstop=3
+
 import os
+import subprocess
+import multiprocessing
+import datetime
+import argparse
+import traceback
 
 import utils
 import vc
@@ -40,8 +48,8 @@ def argParseInit():
    parser.add_argument('--repBed',type=str,help='Path to the simpleRepeat bed file')
    parser.add_argument('--srBed',type=str,help='Path to the full repeat bed file')
    parser.add_argument('--ds', type=int, default=10000, help='down sample if number of UMIs greater than this value (for RNA only)')
-   parser.add_argument('--inputMode', type=str, default='obam', help='obam (default): original BAM file with UMIs; cbam: consensused BAM file; vcf: a list of pre-called mutations in VCF format')
-   parser.add_argument('--inputVCF', type=str, help='optional input VCF file; required when inputMode = vcf')
+   parser.add_argument('--bamType', type=str, default='raw', help='raw (default): raw BAM file with UMIs; consensus: consensused BAM file')
+   parser.add_argument('--inputVCF', type=str, default='none', help='optional input VCF file;')
  
 #------------------------------------------------------------------------------------------------
 # wrapper function for "vc()" - because Python multiprocessing module does not pass stack trace; from runone/smcounter.py by John Dicarlo
@@ -85,8 +93,8 @@ def main(args):
    if not os.path.exists('intermediate'):
       os.makedirs('intermediate')
 
-   # convert VCF to BED if inputMode is 'vcf'
-   bedTarget = args.bedTarget if args.inputMode in ('obam', 'cbam') else vcf2bed(args.inputVCF)
+   # convert VCF to BED if inputVCF is not 'none'
+   bedTarget = args.bedTarget if args.inputVCF == 'none' else utils.vcf2bed(args.inputVCF)
    
    # gather repetitive regions information
    hpRegion = utils.getHpInfo(bedTarget, args.refGenome, args.isRna, args.hpLen)
@@ -98,8 +106,12 @@ def main(args):
 
    # calculate rpb if args.rpb = 0
    if args.rpb == 0.0:
-      rpb = utils.getMeanRpb(args.bamFile) 
-      print("rpb = " + str(round(rpb,1)) + ", computed by smCounter2")
+      if args.bamType == 'raw':
+         rpb = utils.getMeanRpb(args.bamFile) 
+         print("rpb = " + str(round(rpb,1)) + ", computed by smCounter2")
+      else:
+         rpb = 5.0
+         print("rpb = " + str(round(rpb,1)) + ", set by smCounter2 when bamType is consensus and rpb is not given by user")
    else:
       rpb = args.rpb
       print("rpb = " + str(round(rpb,1)) + ", given by user")
@@ -108,7 +120,7 @@ def main(args):
    primerSide = 'R1' if args.primerSide == 1 else 'R2'
 
    # set type of input BAM file
-   bamType = 'original' if args.inputMode in ('obam', 'vcf') else 'consensus'
+   bamType = 'raw' if args.bamType == 'raw' else 'consensus'
 
    #----- loop over locs
    # prepare to save to disk
@@ -134,7 +146,7 @@ def main(args):
       
       # run Python multiprocessing module
       pool = multiprocessing.Pool(processes=args.nCPU)
-      results = [pool.apply_async(vc_wrapper, args=(args.bamFile, x[0], x[1], x[2], x[3], x[4], x[5], args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType)) for x in locChunk]
+      results = [pool.apply_async(vc_wrapper, args=(args.bamFile, x[0], x[1], x[2], x[3], x[4], x[5], args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, args.bamType)) for x in locChunk]
       
       # clear finished pool
       pool.close()
@@ -175,7 +187,7 @@ def main(args):
 
    outfile2 = 'intermediate/' + args.outPrefix + '.VariantList.long.txt'
    outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
-   pValCmd = ' '.join(['Rscript', pValCode, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputMode])
+   pValCmd = ' '.join(['Rscript', pValCode, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
    subprocess.check_call(pValCmd, shell=True)
    print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
