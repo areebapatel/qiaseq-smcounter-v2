@@ -12,8 +12,6 @@ import numpy
 import filters
 
 atgc = ['A', 'T', 'G', 'C']
-seed = 10262016
-nsim = 5000
 minTotalUMI = 5
 lowBqThr = 20
 endBase = 20
