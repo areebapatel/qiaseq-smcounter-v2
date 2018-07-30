@@ -1,26 +1,32 @@
 # qiaseq-smcounter-v2
 ```
-usage: smCounter.v2.4.py [-h] [--runPath RUNPATH] [--bedName BEDNAME]
-                         [--bamName BAMNAME] [--prefix PREFIX] [--nCPU NCPU]
-                         [--minBQ MINBQ] [--minMQ MINMQ] [--hpLen HPLEN]
-                         [--mismatchThr MISMATCHTHR] [--primerDist PRIMERDIST]
-                         [--mtThreshold MTTHRESHOLD] [--rpb RPB] [--isRna]
-                         [--primerSide PRIMERSIDE] [--minAltUMI MINALTUMI]
-                         [--maxAltAllele MAXALTALLELE] [--refGenome REFGENOME]
-                         [--repBed REPBED] [--srBed SRBED]
+usage: run.py [-h] [--runPath RUNPATH] [--bedTarget BEDTARGET]
+              [--bamFile BAMFILE] [--outPrefix OUTPREFIX] [--nCPU NCPU]
+              [--minBQ MINBQ] [--minMQ MINMQ] [--hpLen HPLEN]
+              [--mismatchThr MISMATCHTHR] [--primerDist PRIMERDIST]
+              [--mtThreshold MTTHRESHOLD] [--rpb RPB] [--isRna]
+              [--primerSide PRIMERSIDE] [--minAltUMI MINALTUMI]
+              [--maxAltAllele MAXALTALLELE] [--refGenome REFGENOME]
+              [--repBed REPBED] [--srBed SRBED] [--ds DS] [--bamType BAMTYPE]
+              [--inputVCF INPUTVCF]
 
-Variant calling using molecular barcodes
+smCounter2: variant calling using Unique Molecular Identifiers
 
 optional arguments:
   -h, --help            show this help message and exit
   --runPath RUNPATH     path to working directory
-  --bedName BEDNAME     BED file
-  --bamName BAMNAME     BAM file
-  --prefix PREFIX       file name prefix
+  --bedTarget BEDTARGET
+                        BED file
+  --bamFile BAMFILE     BAM file
+  --outPrefix OUTPREFIX
+                        file name prefix
   --nCPU NCPU           number of CPU to use in parallel
   --minBQ MINBQ         minimum base quality allowed for analysis
-  --minMQ MINMQ         minimum mapping quality allowed for analysis
-  --hpLen HPLEN         Minimum length for homopolymers
+  --minMQ MINMQ         minimum mapping quality allowed for analysis. If the
+                        bam is tagged with its mate's mapq, then the minimum
+                        of the R1 and R2 mapq will be used for comparison, if
+                        not each read is compared independently.
+  --hpLen HPLEN         minimum length for homopolymers
   --mismatchThr MISMATCHTHR
                         average number of mismatches per 100 bases allowed
   --primerDist PRIMERDIST
@@ -42,6 +48,11 @@ optional arguments:
                         Path to the reference fasta file
   --repBed REPBED       Path to the simpleRepeat bed file
   --srBed SRBED         Path to the full repeat bed file
+  --ds DS               down sample if number of UMIs greater than this value
+                        (for RNA only)
+  --bamType BAMTYPE     raw (default): raw BAM file with UMIs; consensus:
+                        consensused BAM file
+  --inputVCF INPUTVCF   optional input VCF file
 ```
 
 [![Build Status](https://travis-ci.org/qiaseq/qiaseq-smcounter-v2.svg?branch=master)](https://travis-ci.org/qiaseq/qiaseq-smcounter-v2)
