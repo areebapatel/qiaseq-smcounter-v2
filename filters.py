@@ -1,7 +1,6 @@
 import os
 import sys
 import scipy.stats
-import fisher
 
 #-------------------------------------------------------------------------------------
 # filter "LM": low coverage
@@ -138,7 +137,7 @@ def rep4others(fltrs, repTypeSet, vtype, rpb, vafToVmfRatio, hqUmiEff, RppEffSiz
 #-------------------------------------------------------------------------------------
 def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt, origRef, vaf_tmp):
    pairs = discordPairCnt[origAlt] + concordPairCnt[origAlt] # total number of paired reads covering the pos
-   pDiscord = 1.0 * discordPairCnt[origAlt] / pairs if pairs > 0 else 0.0
+   pDiscord = 1.0 * discordPairCnt[origAlt] / pairs if pairs > 0 else 0.0   
    if pairs >= 1000 and pDiscord >= 0.5:
       fltrs.add('DP') 
    elif vaf_tmp <= 60.0:
@@ -158,10 +157,10 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
       if oddsRatio < 50 and oddsRatio > 1.0/50:
          return(fltrs)
       
-      temp = fisher.pvalue(refR,refF,altR,altF)
-      pvalue = temp.two_tail
+      pvalue = scipy.stats.fisher_exact([[refR,refF],[altR,altF]])[1]
       if pvalue < 0.00001:
          fltrs.add('SB')
+
    # output variables
    return(fltrs)
 
