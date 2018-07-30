@@ -6,12 +6,21 @@ import operator
 import multiprocessing
 from collections import defaultdict
 import random
-import pysam
 import numpy
-
+import string
+import logging
+import traceback
+# modules from this project
 import filters
+# 3rd party modules
+import pysam
 
-atgc = ['A', 'T', 'G', 'C']
+# Set up some rudimentary logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
+
 minTotalUMI = 5
 lowBqThr = 20
 endBase = 20
@@ -22,12 +31,13 @@ primerTag = "pr"
 _num_cols_ = 38 ## Number of columns in out_long returned by the vc() function of smCounter
 maxDnaReadDepth = 1000000000
 downsamplePileupStackThr = 10 ** 5
+_base_complement_ = string.maketrans("ACTG","TGAC")
 
 #-------------------------------------------------------------------------------------
 # create variables
 #-------------------------------------------------------------------------------------
 def defineVariables():
-   sMtCons, smtSNP = 0, 0 
+   sMtCons, smtSNP = 0, 0
    sMtConsByBase = defaultdict(int)
    sMtConsByDir  = defaultdict(int)
    sMtConsByDirByBase = defaultdict(lambda: defaultdict(int))
@@ -43,7 +53,7 @@ def defineVariables():
    sMtConsByBase['G'] = 0
    sMtConsByBase['C'] = 0
    out_long = ''
-
+   
    return(sMtCons, smtSNP, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, strands, subTypeCnt, hqAgree, hqDisagree, allAgree, allDisagree, rpbCnt, sMtConsByBase, out_long)
 
 #-------------------------------------------------------------------------------------
@@ -56,23 +66,7 @@ def getRef(refg, chrom, pos):
    
    # output variables
    return(refseq, origRef)
-
-#-------------------------------------------------------------------------------------
-# get reverse complement of bases
-#-------------------------------------------------------------------------------------
-def reverseBase(base):
-   if base == 'A':
-      revBase = 'T'
-   elif base == 'T':
-      revBase = 'A'
-   elif base == 'G':
-      revBase = 'C'
-   elif base == 'C':
-      revBase = 'G'
-   else:
-      revBase = 'N'
-   return revBase
-   
+  
 #-------------------------------------------------------------------------------------
 # condition to drop reads
 #-------------------------------------------------------------------------------------
@@ -100,25 +94,16 @@ def dropRead(pileupRead, pos, cigar):
 #-------------------------------------------------------------------------------------
 # get some basic information. NOTE: BC depends on the type of input BAM file
 #-------------------------------------------------------------------------------------   
-def getBasicInfo(pileupRead, bamType):
-   # read ID
-   readid = pileupRead.alignment.query_name  
-
+def getBasicInfo(pileupRead, bamType,readid):
    # if the input BAM is consensused, use read ID as UMI barcode
    BC = pileupRead.alignment.get_tag(mtTag) if bamType == 'raw' else readid
- 
-   # CIGAR  
+   # cigar
    cigar = pileupRead.alignment.cigar
- 
-   # paired read
-   if pileupRead.alignment.is_read1:
-      pairOrder = 'R1'
-   if pileupRead.alignment.is_read2:
-      pairOrder = 'R2'
-   
-   # output variables
-   return(readid, BC, cigar, pairOrder)
-   
+   # alignment positions
+   astart = pileupRead.alignment.reference_start
+   aend = pileupRead.alignment.reference_end
+   return(BC, cigar,astart,aend)
+
 #-------------------------------------------------------------------------------------
 # condition to drop reads
 #-------------------------------------------------------------------------------------   
@@ -160,11 +145,10 @@ def getBaseAndBq(pileupRead, refseq, chrom, pos, minBQ):
 #-------------------------------------------------------------------------------------
 # check if a read is high quality and can be included in the bcDictHq
 #-------------------------------------------------------------------------------------   
-def hqRead(pileupRead, cigar, bq, minMQ, hpInfo, minBQ, mismatchThr):
+def hqRead(pileupRead,cigar,minMQ,mismatchThr):
    # mapping quality filter - both R1 and R2 need to meet the minimum mapQ
    mq = pileupRead.alignment.mapping_quality
-   minMQPass = True
-   
+   minMQPass = True   
    try:   # get mapq of mate
       mateMq = pileupRead.alignment.get_tag(mqTag)
       minFragMQ = min(mq,mateMq)
@@ -180,36 +164,22 @@ def hqRead(pileupRead, cigar, bq, minMQ, hpInfo, minBQ, mismatchThr):
       '''
       if mq < minMQ:
          minMQPass = False
-   
-   # check if the read covers the entire homopolymer stretch
-   # read start and end coordinates in reference genome
-   astart = pileupRead.alignment.reference_start
-   aend = pileupRead.alignment.reference_end
-   if hpInfo == '.':
-      hpCovered = True
-   else:
-      hpChrom, hpStart, hpEnd, totalHpLen, realL, realR = hpInfo.strip().split(';')
-      if astart < int(hpStart) - 1 and aend > int(hpEnd) + 1:
-         hpCovered = True
-      else:
-         hpCovered = False
-   
+         
    # check if there are too many mismatches, excluding indel            
-   NM = 0 # get NM tag 
+   NM = 0 # get NM tag
    allTags = pileupRead.alignment.tags
-   for (tag, value) in allTags:	  
+   for (tag, value) in allTags:
       if tag == 'NM':
 	NM = value
-	break 
-		 
+	break
    nIndel = 0 # count number of INDELs in the read sequence
    cigarOrder = 1
    leftSP = 0  # soft clipped bases on the left
-   rightSP = 0  # soft clipped bases on the right; 
+   rightSP = 0  # soft clipped bases on the right
    for (op, value) in cigar:
       # 1 for insertion
       if op == 1 or op == 2:
-         nIndel += value 
+         nIndel += value
       if cigarOrder == 1 and op == 4:
          leftSP = value
       if cigarOrder > 1 and op == 4:
@@ -224,15 +194,29 @@ def hqRead(pileupRead, cigar, bq, minMQ, hpInfo, minBQ, mismatchThr):
    mismatchPer100b = 100.0 * mismatch / readLen if readLen > 0 else 0.0
    
    # overall condition for high quality read
-   incCond = bq >= minBQ and minMQPass and mismatchPer100b <= mismatchThr and hpCovered
+   incCond = minMQPass and mismatchPer100b <= mismatchThr
 
-   # output variables
-   return(leftSP, hpCovered, incCond)
+   return(leftSP,incCond)
+
+#-------------------------------------------------------------------------------------
+# check if the read covers the entire homopolymer stretch
+#-------------------------------------------------------------------------------------
+def isHPCovered(astart,aend,hpInfo):
+   if hpInfo == '.':
+      hpCovered = True
+   else:
+      hpChrom, hpStart, hpEnd, totalHpLen, realL, realR = hpInfo.strip().split(';')
+      if astart < int(hpStart) - 1 and aend > int(hpEnd) + 1:
+         hpCovered = True
+      else:
+         hpCovered = False
+         
+   return hpCovered
 
 #-------------------------------------------------------------------------------------
 # update read level metrics
 #-------------------------------------------------------------------------------------  
-def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg):   
+def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg):
    # update metrics for all types of positions
    alleleCnt[base] += 1
    strand = 'Reverse' if pileupRead.alignment.is_reverse else 'Forward' # +/- strand and update read depth by strand
@@ -244,12 +228,12 @@ def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, 
    # update metrics for potential SNPs only; metrics will be used for filters
    if pileupRead.indel == 0 and not pileupRead.is_del:
       # count the number of low quality reads (less than Q20 by default) for each base
-      if bq < lowBqThr:  
+      if bq < lowBqThr:
          lowQReads[base] += 1
       if pairOrder == mtSide:
          # distance to the random (UMI) end
          if pileupRead.alignment.is_reverse:
-            distToBcEnd = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSP)      
+            distToBcEnd = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSP)
          else:
             distToBcEnd = pileupRead.query_position - leftSP
          if incCond:
@@ -264,10 +248,10 @@ def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, 
             distToPrimerEnd = pileupRead.query_position - leftSP
          if incCond:
             primerSideBcEndPos[base].append(distToBcEnd)
-            primerSidePrimerEndPos[base].append(distToPrimerEnd)   
+            primerSidePrimerEndPos[base].append(distToPrimerEnd)
    
    # coverage -- read, not fragment
-   cvg += 1   
+   cvg += 1
    
    # output variables
    return(alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg)
@@ -313,9 +297,18 @@ def groupByUMI(readid, BC, base, pairOrder, usedFrag, allFrag, incCond, hpCovere
    return(allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag)
 
 #-------------------------------------------------------------------------------------
+# call pysam function to pile up an interval
+#-------------------------------------------------------------------------------------
+def pileup(bamName,chrom,start,end):
+   samfile = pysam.AlignmentFile(bamName,"rb")
+   for p in samfile.pileup(region = chrom + ":" + start + ":" + end, truncate=True,max_depth = maxDnaReadDepth, stepper="nofilter"):
+      yield p
+   samfile.close()
+   
+#-------------------------------------------------------------------------------------
 # pile up reads and group by UMI; some metrics are updated here
 #-------------------------------------------------------------------------------------
-def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna):
+def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache):
 
    # define variables
    cvg, usedFrag, allFrag = 0, 0, 0
@@ -333,45 +326,54 @@ def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, mi
    bcDictAll = defaultdict(lambda:defaultdict(int))
    bcDictHq = defaultdict(lambda: defaultdict(list))
 
-   samfile = pysam.AlignmentFile(bamName, 'rb')
-   mtSide = 'R1' if primerSide == 'R2' else 'R2'  
+   mtSide = 'R1' if primerSide == 'R2' else 'R2'
   
-   # pile up reads and group by UMI
-   for read in samfile.pileup(region = chrom + ':' + pos + ':' + pos, truncate=True, max_depth=maxDnaReadDepth, stepper='nofilter'):
-      # check pielup size, downsample if above threshold; for RNA only
-      pileupStackSize = read.n
-      downsamplePileup = True if isRna and pileupStackSize > downsamplePileupStackThr else False
-      random.seed(pos)
-   
-      for pileupRead in read.pileups:
-         # drop reads randomly; for RNA only
-         if downsamplePileup and random.randint(1, pileupStackSize) > downsamplePileupStackThr:
-            continue
+   # check pielup size, downsample if above threshold; for RNA only
+   pileupStackSize = read_pileup.n
+   downsamplePileup = True if isRna and pileupStackSize > downsamplePileupStackThr else False
+   random.seed(pos)
 
-         # basic information that will be used in subsequent functions; NOTE: if the input BAM is consensused, use read ID as UMI barcode
-         readid, BC, cigar, pairOrder = getBasicInfo(pileupRead, bamType)
+   # iterate over pileup reads and group by UMI
+   for pileupRead in read_pileup.pileups:
+      # drop reads randomly; for RNA only
+      if downsamplePileup and random.randint(1, pileupStackSize) > downsamplePileupStackThr:
+         continue
 
-         # check if read should be dropped
-         if dropRead(pileupRead, pos, cigar):
-            continue                       
+      # basic information that will be used in subsequent functions; NOTE: if the input BAM is consensused, use read ID as UMI barcode
+      readid = pileupRead.alignment.query_name
+      pairOrder = 'R1' if pileupRead.alignment.is_read1 else 'R2'
+      key = readid + '_' + pairOrder
+      if key in infoCache:
+         BC,cigar,astart,aend = infoCache[key]
+      else:
+         BC,cigar,astart,aend = getBasicInfo(pileupRead, bamType,readid)
+         infoCache[key] = (BC,cigar,astart,aend)
 
-         # retrive base and base-quality, and re-format the base
-         base, bq = getBaseAndBq(pileupRead, refseq, chrom, pos, minBQ)
-         
-         # check if the read is high quality
-         leftSP, hpCovered, incCond = hqRead(pileupRead, cigar, bq, minMQ, hpInfo, minBQ, mismatchThr)
+      # check if read should be dropped
+      if dropRead(pileupRead, pos, cigar):
+         continue
 
-         # update read-level metrics
-         alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg = updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg)
+      # retrive base and base-quality, and re-format the base
+      base, bq = getBaseAndBq(pileupRead, refseq, chrom, pos, minBQ)
 
-         # group reads by UMIs
-         allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag = groupByUMI(readid, BC, base, pairOrder, usedFrag, allFrag, incCond, hpCovered, allBcDict, bcDictHq, bcDictHqBase, bcDictAll, concordPairCnt, discordPairCnt)           
+      # check if the read is high quality
+      hpCovered = isHPCovered(astart,aend,hpInfo)
+      if key in hqCache:
+         leftSP,incCondTemp = hqCache[key]
+         incCond = incCondTemp and bq >= minBQ and hpCovered
+      else:
+         leftSP, incCondTemp = hqRead(pileupRead,cigar,minMQ,mismatchThr)
+         incCond = incCondTemp and bq >= minBQ and hpCovered
+         hqCache[key] = (leftSP,incCondTemp)
 
-   # close the BAM file
-   samfile.close()
-   
+      # update read-level metrics
+      alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg = updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg)
+
+      # group reads by UMIs
+      allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag = groupByUMI(readid, BC, base, pairOrder, usedFrag, allFrag, incCond, hpCovered, allBcDict, bcDictHq, bcDictHqBase, bcDictAll, concordPairCnt, discordPairCnt)
+
    # output variables
-   return(alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag)
+   return(alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag,hqCache,infoCache)
 
 #-------------------------------------------------------------------------------------
 # gradually drop singleton UMIs, depending on rpb and input mode
@@ -385,7 +387,7 @@ def dropSingleton(rpb, bcDictHq, pos, ds, cvg, allMT, isRna, bamType):
       rpb = cvg / float(allMT) if allMT > 0 else 1.0
    
    # rpb < 2 or consensused BAM input: no UMI is dropped
-   if rpb < 2.0 or bamType == 'consensus': 
+   if rpb < 2.0 or bamType == 'consensus':
       bcToKeep = bcDictHq.keys()
 
    # 2 <= rpb < 3: gradually and randomly drop singleton UMIs 
@@ -425,7 +427,7 @@ def dropSingleton(rpb, bcDictHq, pos, ds, cvg, allMT, isRna, bamType):
    if isRna and len(bcToKeep) > ds:
       random.seed(pos)
       bcToKeep = random.sample(bcToKeep, ds)
-		 
+      
    # output variables
    return(bcToKeep)
 
@@ -435,7 +437,7 @@ def dropSingleton(rpb, bcDictHq, pos, ds, cvg, allMT, isRna, bamType):
 def consHqMT(oneBC, mtThreshold):
    totalCnt = oneBC['all']
    cons = ''
-   # find the majority base(s) whose proportion in the MT >= mtThreshold. NOTE: mtThreshold must be > 0.5 to ensure only one cons 
+   # find the majority base(s) whose proportion in the MT >= mtThreshold. NOTE: mtThreshold must be > 0.5 to ensure only one cons
    for base in oneBC:
       if base == 'all':
          continue
@@ -516,13 +518,13 @@ def updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, all
       # MT counts from + and - strands 
       sMtConsByDir[primerDirection] += 1
       sMtConsByDirByBase[cons][primerDirection] += 1
-      # read pairs in the UMI            
+      # read pairs in the UMI
       rpbCnt[cons].append(bcDictAll[bc]['all'])
       
       # base substitutions (snp only)
       # Note: smtSNP and strands are usually NOT equal to sMtCons and sMtConsByDir. The former include only base substitutions MTs, and the latter include indel MTs. 
       if len(cons) == 1:
-         basePair = origRef + '/' + cons if primerDirCode == '0' else reverseBase(origRef) + '/' + reverseBase(cons)
+         basePair = origRef + '/' + cons if primerDirCode == '0' else origRef.translate(_base_complement_) + '/' + cons.translate(_base_complement_)
          subTypeCnt[basePair] += 1
          smtSNP += 1
          strands[primerDirection] += 1
@@ -536,7 +538,7 @@ def updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, all
 def outbkg(chrom, pos, origRef, subTypeCnt, strands, smtSNP):
    bkgErrList = [chrom, pos, origRef, str(subTypeCnt['A/G']), str(subTypeCnt['G/A']), str(subTypeCnt['C/T']), str(subTypeCnt['T/C']), str(subTypeCnt['A/C']), str(subTypeCnt['C/A']), str(subTypeCnt['A/T']), str(subTypeCnt['T/A']), str(subTypeCnt['C/G']), str(subTypeCnt['G/C']), str(subTypeCnt['G/T']), str(subTypeCnt['T/G']), str(strands['F']), str(strands['R']), str(smtSNP)]
       
-   out_bkg = '\t'.join(bkgErrList) + '\n'	
+   out_bkg = '\t'.join(bkgErrList) + '\n'
 
    # output variables
    return(out_bkg)
@@ -544,7 +546,7 @@ def outbkg(chrom, pos, origRef, subTypeCnt, strands, smtSNP):
 #-------------------------------------------------------------------------------------
 # reset variant type, reference base, variant base 
 #-------------------------------------------------------------------------------------
-def setRefAltType(origRef, origAlt): 
+def setRefAltType(origRef, origAlt):
    vtype = '.'
    ref = origRef
    alt = origAlt
@@ -636,19 +638,17 @@ def outlong(out_long, chrom, pos, ref, alt, vtype, origRef, origAlt, sMtCons, sM
 #-------------------------------------------------------------------------------------
 # function to call variants
 #-------------------------------------------------------------------------------------
-def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refg, minAltUMI, maxAltAllele, isRna, ds, bamType):
+def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType,read_pileup,hqCache,infoCache):
 
    # initiate variables
    sMtCons, smtSNP, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, strands, subTypeCnt, hqAgree, hqDisagree, allAgree, allDisagree, rpbCnt, sMtConsByBase, out_long = defineVariables()
 	
    # find the reference base
-   refseq = pysam.FastaFile(refg)
    origRef = refseq.fetch(reference=chrom, start=int(pos)-1, end=int(pos))
    origRef = origRef.upper()
-   #origRef = getRef(refg, chrom, pos)
    
    # pile up and group reads by UMIs
-   alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag = pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna)
+   alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache = pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache)
    
    # gradually drop singleton UMIs; keep all UMIs for consensused BAM
    allMT = len(allBcDict)
@@ -744,4 +744,39 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          if altCnt >= maxAltAllele:
             break
 			
-   return (out_long, out_bkg)
+   return (out_long, out_bkg, hqCache, infoCache)
+
+#------------------------------------------------------------------------------------------------
+# wrapper function for "vc()" - because Python multiprocessing module does not pass stack trace; from runone/smcounter.py by John Dicarlo
+#------------------------------------------------------------------------------------------------
+def vc_wrapper(general_args,interval):
+   try:
+      output = []
+      hqCache = {}
+      infoCache = {}
+      bamName, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refg, minAltUMI, maxAltAllele, isRna, ds, bamType = general_args
+
+      chrom = interval[0][0]
+      intervalStartPos = interval[0][1]
+      intervalEndPos = interval[-1][1]
+      
+      refseq = pysam.FastaFile(refg)
+      i = 0
+      for read_pileup in pileup(bamName,chrom,intervalStartPos,intervalEndPos):
+         site = interval[i]
+         i+=1
+         chrom,pos,repType,hpInfo,srInfo,repInfo = site
+         temp = [bamName,chrom,pos,repType,hpInfo,srInfo,repInfo,minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds,bamType,read_pileup,hqCache,infoCache]
+         out_long,out_bkg,hqCache,infoCache = vc(*temp)
+         out = [out_long,out_bkg]
+         output.append(out)
+   except Exception as e:
+      out = ("Exception thrown!\n" + traceback.format_exc(),"no_bg")
+      output.append(out)
+      logger.info("Exception thrown in vc() function at genome location : {pos} in interval : {chrom}:{it1}-{it2}".format(pos=pos,chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
+      logger.info(out[0])
+      raise Exception(e)
+   
+   refseq.close()
+   logger.info("Finished processing interval {chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
+   return output
