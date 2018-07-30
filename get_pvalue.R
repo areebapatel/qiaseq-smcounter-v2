@@ -3,7 +3,8 @@
 # integrate prior info of bkg error distribution (based on duplex data) and data specific error distribution
 # modified the prior distribution using more stringint consensus criteria. 
 # different prior distributions for including/excluding 1 read pair UMIs
-# Chang Xu, 16MAY2017
+# allow Beta distribution adjustment when there is no VCF input
+# Chang Xu, 10July2018
 
 rm(list=ls())
 library(plyr)
@@ -23,6 +24,7 @@ outfile_bedgraph <- args[7]
 outprefix <- args[8]
 rpb <- as.numeric(args[9])
 minAltUMI <- as.numeric(args[10])
+inputVCF <- args[11]
 min.mtDepth <- 1000
 
 # set working directory
@@ -180,38 +182,44 @@ p0.low <- top4$p0[3]
 n0.high <- floor(nsim * p0.high)
 n0.low <- floor(nsim * p0.low)
 
-# read in data-specific background error file
-bkg <- read.delim(bkgfile, header=T, stringsAsFactors=F, sep='\t')
-colnames(bkg) <- cols
+# read in data-specific background error file - only when input is not VCF
+if(inputVCF == 'none'){
+  bkg <- read.delim(bkgfile, header=T, stringsAsFactors=F, sep='\t')
+  colnames(bkg) <- cols
 
-################### bkg errors from the readset ##################
-# A/G error rate from data 
-tmp <- bkg[(bkg$ref=='A' & bkg$neg.strand > min.mtDepth) | (bkg$ref=='T' & bkg$pos.strand > min.mtDepth), ]
-tmp$all <- ifelse(tmp$ref=='A', tmp$neg.strand, tmp$pos.strand)
-d.ag <- tmp$AG / tmp$all
-tmp <- tmp[d.ag < 0.01,]
-mean.ag <- sum(tmp$AG) / sum(tmp$all)
-n.ag <- nrow(tmp)
+  ################### bkg errors from the readset ##################
+  # A/G error rate from data 
+  tmp <- bkg[(bkg$ref=='A' & bkg$neg.strand > min.mtDepth) | (bkg$ref=='T' & bkg$pos.strand > min.mtDepth), ]
+  tmp$all <- ifelse(tmp$ref=='A', tmp$neg.strand, tmp$pos.strand)
+  d.ag <- tmp$AG / tmp$all
+  tmp <- tmp[d.ag < 0.01,]
+  mean.ag <- sum(tmp$AG) / sum(tmp$all)
+  n.ag <- nrow(tmp)
 
-# G/A error rate from data
-tmp <- bkg[(bkg$ref=='G' & bkg$neg.strand > min.mtDepth) | (bkg$ref=='C' & bkg$pos.strand > min.mtDepth), ]
-tmp$all <- ifelse(tmp$ref=='G', tmp$neg.strand, tmp$pos.strand)
-d.ga <- tmp$GA / tmp$all
-tmp <- tmp[d.ga < 0.01,]
-mean.ga <- sum(tmp$GA) / sum(tmp$all)
-n.ga <- nrow(tmp)
+  # G/A error rate from data
+  tmp <- bkg[(bkg$ref=='G' & bkg$neg.strand > min.mtDepth) | (bkg$ref=='C' & bkg$pos.strand > min.mtDepth), ]
+  tmp$all <- ifelse(tmp$ref=='G', tmp$neg.strand, tmp$pos.strand)
+  d.ga <- tmp$GA / tmp$all
+  tmp <- tmp[d.ga < 0.01,]
+  mean.ga <- sum(tmp$GA) / sum(tmp$all)
+  n.ga <- nrow(tmp)
 
-# highest error rate
-mu.high <- max(mean.ag, mean.ga)
-n.high <- min(n.ag, n.ga)
+  # highest error rate
+  mu.high <- max(mean.ag, mean.ga)
+  n.high <- min(n.ag, n.ga)
 
-if(is.na(mu.high) | is.na(n.high) | n.high < 100) {
-   p.high <- rbeta(n=nsim, shape1=a.ga.orig, shape2=b.ga.orig)
-} else{
-   a.high <- calc.a(mu.high, sigma.high)
-   b.high <- calc.b(mu.high, sigma.high)
-   p.high <- rbeta(n=nsim, shape1=a.high, shape2=b.high)
+  if(is.na(mu.high) | is.na(n.high) | n.high < 100) {
+    p.high <- rbeta(n=nsim, shape1=a.ga.orig, shape2=b.ga.orig)
+  } else{
+    a.high <- calc.a(mu.high, sigma.high)
+    b.high <- calc.b(mu.high, sigma.high)
+    p.high <- rbeta(n=nsim, shape1=a.high, shape2=b.high)
+  }
+} else{  # when input is VCF, use the original beta parameters
+  p.high <- rbeta(n=nsim, shape1=a.ga.orig, shape2=b.ga.orig)
 }
+
+# low error rates always determined by the prior only
 p.low <- c(rbeta(n=nsim-n0.low, shape1=a.ct.orig, shape2=b.ct.orig), rep(0, n0.low))
 
 # compute limit of detection (lod)  for binned sUMT values 

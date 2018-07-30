@@ -1,14 +1,8 @@
-#!/usr/bin/python
-# vim: tabstop=9 expandtab shiftwidth=3 softtabstop=3
-# convert long text output to VCF format (v2.4). Merges multi-allelic variants to a single row
-# currently, only allow multi-allelic SNPs
-# Chang Xu. 20OCT2017
-
 import os
-import sys
-from operator import itemgetter
 
-
+#-------------------------------------------------------------------------------------
+# assign genotype
+#-------------------------------------------------------------------------------------
 def assign_gt(alt,chrom,vmf):
    ''' Function for faking the Genotype i.e. GT field
    for downstream tools
@@ -139,7 +133,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants):
 #--------------------------------------------------------------------------------------
 # main function
 #--------------------------------------------------------------------------------------
-def main(runPath, outlong, sampleName):
+def makeVcf(runPath, outlong, sampleName):
    # change working directory to runDir
    os.chdir(runPath)
    outAll = open(sampleName + '.smCounter.all.txt', 'w')
@@ -149,7 +143,6 @@ def main(runPath, outlong, sampleName):
    
    cutoff = 6
    minCutoff = {'INDEL': 2,'SNP':2} ## Cutoff for the low-PI file
-
    
    ID = '.'
    headerAll = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sForUMT', 'sRevUMT', 'sVMT', 'sForVMT', 'sRevVMT', 'sVMF', 'sForVMF', 'sRevVMF', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'DP', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'logpval', 'FILTER']
@@ -264,17 +257,4 @@ def main(runPath, outlong, sampleName):
    outVariants.close()
    outVcf.close()
    outLowPi.close()
-
-#----------------------------------------------------------------------------------------------
-#pythonism to run from the command line
-#----------------------------------------------------------------------------------------------
-if __name__ == "__main__":
-   runPath = sys.argv[1]
-   outlong = sys.argv[2]
-   sampleName = sys.argv[3]
-   main(runPath, outlong, sampleName)
-
-
-
-
 
