@@ -1,7 +1,7 @@
 import os
 import sys
 import scipy.stats
-
+import fisher
 
 #-------------------------------------------------------------------------------------
 # filter "LM": low coverage
@@ -146,12 +146,22 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
       refF = forwardCnt[origRef]
       altR = reverseCnt[origAlt]
       altF = forwardCnt[origAlt]
-      fisher = scipy.stats.fisher_exact([[refR, refF], [altR, altF]])
-      oddsRatio = fisher[0]
-      pvalue = fisher[1]
-      if pvalue < 0.00001 and (oddsRatio >= 50 or oddsRatio <= 1.0/50):
+      
+      if (refF == 0 or altR == 0) and (refR == 0 or altF == 0):
+         oddsRatio = float("Nan")
+         return(fltrs)
+      elif refF == 0 or altR == 0:
+         oddsRatio = float("inf")
+      else:
+         oddsRatio = float(refR*altF)/(refF*altR)
+         
+      if oddsRatio < 50 and oddsRatio > 1.0/50:
+         return(fltrs)
+      
+      temp = fisher.pvalue(refR,refF,altR,altF)
+      pvalue = temp.two_tail
+      if pvalue < 0.00001:
          fltrs.add('SB')
-
    # output variables
    return(fltrs)
 
