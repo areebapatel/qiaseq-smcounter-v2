@@ -6,17 +6,17 @@ import subprocess
 import multiprocessing
 import datetime
 import argparse
-import traceback
+import functools
 
+# our modules
 import utils
-import vc
+import vcf
+from vc import vc_wrapper
 
 # global constants
 codePath = os.path.dirname(os.path.abspath(__file__))
-pValCode = os.path.join(codePath,'get_pvalue_v2.R')
+pValCode = os.path.join(codePath,'get_pvalue.R')
 locChunkLen = 1000
-maxDnaReadDepth = 1000000000
-downsamplePileupStackThr = 10 ** 5
 seed = 10262016
 nsim = 5000
 parser = None
@@ -51,20 +51,7 @@ def argParseInit():
    parser.add_argument('--srBed',type=str,help='Path to the full repeat bed file')
    parser.add_argument('--ds', type=int, default=10000, help='down sample if number of UMIs greater than this value (for RNA only)')
    parser.add_argument('--bamType', type=str, default='raw', help='raw (default): raw BAM file with UMIs; consensus: consensused BAM file')
-   parser.add_argument('--inputVCF', type=str, default='none', help='optional input VCF file;')
- 
-#------------------------------------------------------------------------------------------------
-# wrapper function for "vc()" - because Python multiprocessing module does not pass stack trace; from runone/smcounter.py by John Dicarlo
-#------------------------------------------------------------------------------------------------
-def vc_wrapper(*args):
-   try:
-      output = vc.vc(*args)
-   except Exception as e:
-      print("Exception thrown in vc() function at genome location:", args[1], args[2])
-      output = ("Exception thrown!\n" + traceback.format_exc(),'no_bg')
-      print output[0]
-      raise Exception(e)
-   return output
+   parser.add_argument('--inputVCF', type=str, default='none', help='optional input VCF file;') 
 
 #--------------------------------------------------------------------------------------
 # main function
@@ -129,57 +116,23 @@ def main(args):
    outfile_long = open('intermediate/nopval.' + args.outPrefix + '.VariantList.long.txt', 'w')
    bkgFileName = 'intermediate/bkg.' + args.outPrefix + '.txt'
    outfile_bkg = open(bkgFileName, 'w')
-
    outfile_long.write('\t'.join(header_1) + '\n')
    outfile_bkg.write('\t'.join(header_2) + '\n')
 
-   # process in chunks (for more granular logging)
-   print "chunk size = " + str(locChunkLen)
-   locLen = len(locList)
-   locChunkCount = locLen / locChunkLen
-   if locLen % locChunkLen:
-      locChunkCount += 1
-   
-   for idx in range(locChunkCount):
-      # this chunks
-      idxStart = idx * locChunkLen
-      idxEnd = min(idxStart + locChunkLen, locLen)
-      locChunk = locList[idxStart:idxEnd]
-      
-      # run Python multiprocessing module
-      pool = multiprocessing.Pool(processes=args.nCPU)
-      results = [pool.apply_async(vc_wrapper, args=(args.bamFile, x[0], x[1], x[2], x[3], x[4], x[5], args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, args.bamType)) for x in locChunk]
-      
-      # clear finished pool
-      pool.close()
-      pool.join()
-      
-      # get results - a list of tuples of 2 strings
-      output = [p.get() for p in results]
-      
-      # check for exceptions thrown by vc()
-      for idx in range(len(output)):
-         line,bg = output[idx]
-         if line.startswith("Exception thrown!"):
-            print(line)
-            raise Exception("Exception thrown in vc() at location: " + str(locChunk[idx]))
-      
-      # write output and bkg files to disk, for current chunk
-      for (vcOutline, bkgOutline) in output:
+   pool = multiprocessing.Pool(args.nCPU)
+   func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType))
+
+   # process exons/intervals from bed file in parallel
+   for interval_result in pool.map(func,locList):
+      for base_result in interval_result:
+         vcOutline,bkgOutline = base_result
          outfile_long.write(vcOutline)
          outfile_bkg.write(bkgOutline)
          
-      # log some info
-      memInfo = [x for x in subprocess.check_output('free -m', shell = True).split('\n')[1].split(' ') if x.isalnum()]
-      memTotal = int(memInfo[0])
-      memUsed = int(memInfo[1])
-      memUsedPct = round(100.0 * memUsed / memTotal, 1)
-      posStart = locChunk[0][0] + ":" + locChunk[0][1]
-      posEnd = locChunk[-1][0] + ":" + locChunk[-1][1]
-      print str(datetime.datetime.now()) + "\t" + posStart + "\t" + posEnd + "\t" + str(memUsed) + "\t" + str(memUsedPct)
-      
-      del pool, results, output
-
+   # clear finished pool
+   pool.close()
+   pool.join()
+   # close output file handles
    outfile_long.close()
    outfile_bkg.close()
 
@@ -194,7 +147,7 @@ def main(args):
    print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
    ## make VCFs
-   utils.makeVcf(args.runPath, outfile2, args.outPrefix)
+   vcf.makeVcf(args.runPath, outfile2, args.outPrefix)
 
    # remove intermediate files
    os.remove('hp.roi.bed')
