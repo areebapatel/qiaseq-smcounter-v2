@@ -3,7 +3,7 @@
 # integrate prior info of bkg error distribution (based on duplex data) and data specific error distribution
 # modified the prior distribution using more stringint consensus criteria. 
 # different prior distributions for including/excluding 1 read pair UMIs
-# allow Beta distribution adjustment when input is obam or cbam, but not vcf
+# allow Beta distribution adjustment when there is no VCF input
 # Chang Xu, 10July2018
 
 rm(list=ls())
@@ -24,7 +24,7 @@ outfile_bedgraph <- args[7]
 outprefix <- args[8]
 rpb <- as.numeric(args[9])
 minAltUMI <- as.numeric(args[10])
-inputMode <- args[11]
+inputVCF <- args[11]
 min.mtDepth <- 1000
 
 # set working directory
@@ -182,8 +182,8 @@ p0.low <- top4$p0[3]
 n0.high <- floor(nsim * p0.high)
 n0.low <- floor(nsim * p0.low)
 
-# read in data-specific background error file - only when input is the original of consensus BAM file, not VCF
-if(inputMode %in% c('obam', 'cbam')){
+# read in data-specific background error file - only when input is not VCF
+if(inputVCF == 'none'){
   bkg <- read.delim(bkgfile, header=T, stringsAsFactors=F, sep='\t')
   colnames(bkg) <- cols
 
