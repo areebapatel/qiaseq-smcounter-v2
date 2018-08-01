@@ -59,13 +59,11 @@ def defineVariables():
 #-------------------------------------------------------------------------------------
 # get the reference base
 #-------------------------------------------------------------------------------------
-def getRef(refg, chrom, pos):
-   refseq = pysam.FastaFile(refg)
+def getRef(refseq, chrom, pos):
    origRef = refseq.fetch(reference=chrom, start=int(pos)-1, end=int(pos))
    origRef = origRef.upper()
-   
    # output variables
-   return(refseq, origRef)
+   return(origRef)
   
 #-------------------------------------------------------------------------------------
 # condition to drop reads
@@ -301,8 +299,20 @@ def groupByUMI(readid, BC, base, pairOrder, usedFrag, allFrag, incCond, hpCovere
 #-------------------------------------------------------------------------------------
 def pileup(bamName,chrom,start,end):
    samfile = pysam.AlignmentFile(bamName,"rb")
+   current_pos = int(start)
    for p in samfile.pileup(region = chrom + ":" + start + ":" + end, truncate=True,max_depth = maxDnaReadDepth, stepper="nofilter"):
-      yield p
+      ref_pos = p.pos+1
+      while True:
+         if ref_pos < current_pos:
+            raise Exception("pysam returned out of bounds coordinate !")
+         elif ref_pos > current_pos:
+            yield None
+            current_pos+=1
+         else:
+            yield p
+            current_pos+=1
+            break
+      
    samfile.close()
    
 #-------------------------------------------------------------------------------------
@@ -644,8 +654,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
    sMtCons, smtSNP, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, strands, subTypeCnt, hqAgree, hqDisagree, allAgree, allDisagree, rpbCnt, sMtConsByBase, out_long = defineVariables()
 	
    # find the reference base
-   origRef = refseq.fetch(reference=chrom, start=int(pos)-1, end=int(pos))
-   origRef = origRef.upper()
+   origRef = getRef(refseq,chrom,pos)
    
    # pile up and group reads by UMIs
    alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache = pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache)
@@ -766,10 +775,19 @@ def vc_wrapper(general_args,interval):
          site = interval[i]
          i+=1
          chrom,pos,repType,hpInfo,srInfo,repInfo = site
+         
+         if read_pileup is None: # site is not covered at all, pysam simply skips such sites
+            origRef = getRef(refseq,chrom,pos)
+            out_long = '\t'.join([chrom, pos, origRef] + ["0"] * (_num_cols_ - 4) + ["LM"]) + "\n"
+            out = [out_long,""]
+            output.append(out)
+            continue
+         
          temp = [bamName,chrom,pos,repType,hpInfo,srInfo,repInfo,minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds,bamType,read_pileup,hqCache,infoCache]
          out_long,out_bkg,hqCache,infoCache = vc(*temp)
          out = [out_long,out_bkg]
          output.append(out)
+         
    except Exception as e:
       out = ("Exception thrown!\n" + traceback.format_exc(),"no_bg")
       output.append(out)
