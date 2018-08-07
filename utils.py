@@ -218,6 +218,7 @@ def getLocList(bedTarget, hpRegion, repRegion, srRegion):
          regionStart = int(lineList[1]) + 1   # target region starts from 1-base after 
          regionEnd = lineList[2]
          interval = [] # information for an interval
+         num_bases = 0 # no. of bases in an interval
 
          pos = regionStart
          lineEnd = False
@@ -248,11 +249,20 @@ def getLocList(bedTarget, hpRegion, repRegion, srRegion):
             repType = 'NA' if len(repTypeSet) == 0 else ';'.join(list(repTypeSet))
             interval.append((chrom, str(pos), repType, hpInfo, srInfo, repInfo))
 
+            if num_bases == 250: # restrict interval size to 250 bases
+               locList.append(interval)
+               interval = []
+               num_bases = 0
+
             if str(pos) == regionEnd:
                lineEnd = True
             else:
+               num_bases += 1
                pos += 1
-         locList.append(interval)
+
+
+         if len(interval) > 0:
+            locList.append(interval)
    
    # output variables
    return(locList)
