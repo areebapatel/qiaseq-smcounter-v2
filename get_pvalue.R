@@ -100,7 +100,7 @@ calc_lod <- function(n,p.high){
     print(p.high)
     print(lod.high)
   }
-  return(lod.high)
+  return(min(1.0,lod.high)) # cap lod to 1.0, this becomes inf when umi depth is 0
 }
 # function to collapse same value(lod/coverage) columns
 # and write a bedgraph file
