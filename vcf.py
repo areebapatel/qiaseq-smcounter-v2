@@ -147,7 +147,8 @@ def makeVcf(runPath, outlong, sampleName):
    ID = '.'
    headerAll = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sForUMT', 'sRevUMT', 'sVMT', 'sForVMT', 'sRevVMT', 'sVMF', 'sForVMF', 'sRevVMF', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'DP', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'logpval', 'FILTER']
    headerVariants = ['CHROM','POS','REF','ALT','TYPE','DP','VDP','VAF','sUMT','sVMT','sVMF','QUAL','FILTER']
-   headerLowPi = [sampleName] + headerVariants   
+   headerLowPi = ['READ_SET','CHROM','POS','ID','REF','ALT','QUAL','FILTER','TYPE','RepRegion','DP','UMT','VMT','VMF']
+   
    headerVcf = '##fileformat=VCFv4.2' + '\n' + \
          '##reference=GRCh37' + '\n' + \
          '##FILTER=<ID=LM,Description="Low coverage (fewer than 5 barcodes)">' + '\n' + \
@@ -224,7 +225,8 @@ def makeVcf(runPath, outlong, sampleName):
          lenAlleles = len(alleles)
 
          if fQUAL < cutoff: ## Write to low-PI file
-            outLowPi.write(sampleName+'\t'+'\t'.join(tempVar)+'\n')
+            outLowPi.write('\t'.join([sampleName,CHROM,POS,".",REF,ALT,QUAL,FILTER,TYPE,RepRegion,DP,sUMT,sVMT,sVMF]))            
+            outLowPi.write('\n')
             continue
             
          # if current chrom and position equal to last line, append it for potential multi-allelic output
