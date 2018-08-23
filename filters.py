@@ -14,13 +14,12 @@ def lm(fltrs, sMtCons):
 #-------------------------------------------------------------------------------------
 # Initial check of HP and LowC; NOTE: the results are not final filters and may be reversed by hp4indel() and rep4others()
 #-------------------------------------------------------------------------------------
-def isHPorLowComp(chrom, pos, length, refb, altb, refs, repTypeSet, hpInfo):
+def isHPorLowComp(chrom, pos, length, refb, altb, refseq, repTypeSet, hpInfo, chromLength):
    # ref sequence of [pos-length, pos+length] interval
-   chromLength = refs.get_reference_length(chrom)
    pos0 = int(pos) - 1   
-   Lseq = refs.fetch(reference=chrom,start=max(0,pos0-length),end=pos0).upper()
-   Rseq_ref = refs.fetch(reference=chrom,start=pos0+len(refb),end=min(pos0+len(refb)+length,chromLength)).upper()  
-   Rseq_alt = refs.fetch(reference=chrom,start=min(pos0+len(altb),chromLength), end=min(pos0+len(altb)+length,chromLength)).upper()
+   Lseq = refseq.fetch(reference=chrom,start=max(0,pos0-length),end=pos0).upper()
+   Rseq_ref = refseq.fetch(reference=chrom,start=pos0+len(refb),end=min(pos0+len(refb)+length,chromLength)).upper()  
+   Rseq_alt = refseq.fetch(reference=chrom,start=min(pos0+len(altb),chromLength), end=min(pos0+len(altb)+length,chromLength)).upper()
    refSeq = Lseq + refb + Rseq_ref
    altSeq = Lseq + altb + Rseq_alt
    # check homopolymer
@@ -32,9 +31,9 @@ def isHPorLowComp(chrom, pos, length, refb, altb, refs, repTypeSet, hpInfo):
 
    # check low complexity -- window length is 2 * homopolymer region. If any 2 nucleotide >= 99% 
    len2 = 2 * length
-   LseqLC = refs.fetch(reference=chrom,start=max(0,pos0-len2),end=pos0).upper()
-   Rseq_refLC = refs.fetch(reference=chrom,start=pos0+len(refb),end=min(pos0+len(refb)+len2,chromLength)).upper()
-   Rseq_altLC = refs.fetch(reference=chrom,start=min(pos0+len(altb),chromLength),end=min(pos0+len(altb)+len2,chromLength)).upper()
+   LseqLC = refseq.fetch(reference=chrom,start=max(0,pos0-len2),end=pos0).upper()
+   Rseq_refLC = refseq.fetch(reference=chrom,start=pos0+len(refb),end=min(pos0+len(refb)+len2,chromLength)).upper()
+   Rseq_altLC = refseq.fetch(reference=chrom,start=min(pos0+len(altb),chromLength),end=min(pos0+len(altb)+len2,chromLength)).upper()
    # ref seq   
    refSeqLC = LseqLC + refb + Rseq_refLC
    # alt seq
@@ -68,8 +67,7 @@ def isHPorLowComp(chrom, pos, length, refb, altb, refs, repTypeSet, hpInfo):
          top2Freq = 1.0 * (sortedCounts[0] + sortedCounts[1]) / len2
          if top2Freq >= 0.99:
             lowcomp = True
-            break
-   
+            break   
    
    if homop and hpInfo == '.':   # if REF is not HP but ALT is, count as HP and set length = 8
       repTypeSet.add('HP')
@@ -129,7 +127,6 @@ def rep4others(fltrs, repTypeSet, vtype, rpb, vafToVmfRatio, hqUmiEff, RppEffSiz
       else:
          fltrs.update(repTypeSet)
 
-   # output variables
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
@@ -140,28 +137,27 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
    pDiscord = 1.0 * discordPairCnt[origAlt] / pairs if pairs > 0 else 0.0   
    if pairs >= 1000 and pDiscord >= 0.5:
       fltrs.add('DP') 
-   elif vaf_tmp <= 60.0:
+   elif vaf_tmp <= 60:
       refR = reverseCnt[origRef]
       refF = forwardCnt[origRef]
       altR = reverseCnt[origAlt]
       altF = forwardCnt[origAlt]
       
-      if (refF == 0 or altR == 0) and (refR == 0 or altF == 0):
-         oddsRatio = float("Nan")
-         return(fltrs)
-      elif refF == 0 or altR == 0:
-         oddsRatio = float("inf")
+      if refF == 0 or altR == 0:
+         if (refR == 0 or altF == 0:         
+            return(fltrs)
+         else:
+            oddsRatio = float("inf")
       else:
          oddsRatio = float(refR*altF)/(refF*altR)
          
-      if oddsRatio < 50 and oddsRatio > 1.0/50:
+      if oddsRatio < 50 and oddsRatio > 0.02:
          return(fltrs)
       
       pvalue = scipy.stats.fisher_exact([[refR,refF],[altR,altF]])[1]
       if pvalue < 0.00001:
          fltrs.add('SB')
 
-   # output variables
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
@@ -169,7 +165,7 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
 #-------------------------------------------------------------------------------------
 def pb(fltrs, origAlt, sMtConsByDir, sMtConsByDirByBase):
    if sMtConsByDir['F'] >= 200 and sMtConsByDir['R'] >= 200:
-      oddsRatioPB = ((sMtConsByDirByBase[origAlt]['F']+0.5)/(sMtConsByDir['F']+0.5)) / ((sMtConsByDirByBase[origAlt]['R']+.5)/(sMtConsByDir['R']+.5))
+      oddsRatioPB = ((sMtConsByDirByBase[origAlt]['F']+0.5)/(sMtConsByDir['F']+0.5)) / ((sMtConsByDirByBase[origAlt]['R']+0.5)/(sMtConsByDir['R']+0.5))
       oddsRatioPB = round(oddsRatioPB, 2)
       if oddsRatioPB > 10 or oddsRatioPB < 0.1:
          fltrs.add('PB')
@@ -177,60 +173,78 @@ def pb(fltrs, origAlt, sMtConsByDir, sMtConsByDirByBase):
    else:
       primerBiasOR = 'NA'
 
-   # output variables
    return(fltrs, primerBiasOR)
 
 #-------------------------------------------------------------------------------------
 # filter "LowQ": reads supporting the variant have low base quality 
 #-------------------------------------------------------------------------------------
-def lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt):
-   intercept = 7.652256
-   bRatio = -1.254942
-   bPLowQ = -6.602585
-   cutoffLowQ = 1.068349
+def lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt, isRna):
+   if isRna:
+      if bqAlt > 0.4:
+        fltrs.add('LowQ')
+   else:     
+       intercept = 7.652256
+       bRatio = -1.254942
+       bPLowQ = -6.602585
+       cutoffLowQ = 1.068349
 
-   if origAlt in alleleCnt and origAlt in lowQReads and alleleCnt[origAlt] > 0:
-      predLowQ = intercept +  bRatio * vafToVmfRatio + bPLowQ * bqAlt
-      isLowQ = True if predLowQ < cutoffLowQ else False
-	  
-      if bqAlt > 0.4 and vafToVmfRatio >= 0 and isLowQ:
-         fltrs.add('LowQ')
+       if origAlt in alleleCnt and origAlt in lowQReads and alleleCnt[origAlt] > 0:
+          predLowQ = intercept +  bRatio * vafToVmfRatio + bPLowQ * bqAlt
+          isLowQ = True if predLowQ < cutoffLowQ else False
+          
+          if bqAlt > 0.4 and vafToVmfRatio >= 0 and isLowQ:
+             fltrs.add('LowQ')
 
-   # output variables
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
 # filter "RBCP": variant too close to the random (UMI) end on R1
 #-------------------------------------------------------------------------------------
-def rbcp(fltrs, endBase, mtSideBcEndPos, origRef, origAlt, vaf_tmp):
+def rbcp(fltrs, endBase, mtSideBcEndPos, origRef, origAlt, vaf_tmp, isRna):
    refLeEnd = sum(d <= endBase for d in mtSideBcEndPos[origRef])  # number of REF R2 reads with distance <= endBase
    refGtEnd = len(mtSideBcEndPos[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
    altLeEnd = sum(d <= endBase for d in mtSideBcEndPos[origAlt])  # number of ALT R2 reads with distance <= endBase
    altGtEnd = len(mtSideBcEndPos[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
-   fisher = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])
-   oddsRatio = fisher[0]
-   pvalue = fisher[1]
-   if pvalue < 0.001 and oddsRatio < 0.05 and vaf_tmp <= 60.0:
+   
+   if refGtEnd == 0 or altLeEnd == 0:
+      if refLeEnd == 0 or altGtEnd == 0:
+         return(fltrs)
+      else:
+         oddsRatio = float("inf")   
+   else:
+      oddsRatio = float(refLeEnd*altGtEnd)/(refGtEnd*altLeEnd)   
+   if oddsRatio >= 0.05 or (not isRna and vaf_tmp > 60.0):
+      return(fltrs)
+   
+   pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]   
+   if pvalue < 0.001:
       fltrs.add('RBCP')
-
-   # output variables
+   
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
 # filter "RPCP": variant too close to the random (UMI) end on R2
 #-------------------------------------------------------------------------------------
-def rpcp(fltrs, endBase, primerSideBcEndPos, origRef, origAlt, vaf_tmp):
+def rpcp(fltrs, endBase, primerSideBcEndPos, origRef, origAlt, vaf_tmp, isRna):
    refLeEnd = sum(d <= endBase for d in primerSideBcEndPos[origRef])  # number of REF R2 reads with distance <= endBase
    refGtEnd = len(primerSideBcEndPos[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
    altLeEnd = sum(d <= endBase for d in primerSideBcEndPos[origAlt])  # number of ALT R2 reads with distance <= endBase
    altGtEnd = len(primerSideBcEndPos[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
-   fisher = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])
-   oddsRatio = fisher[0]
-   pvalue = fisher[1]
-   if pvalue < 0.001 and oddsRatio < 0.05 and vaf_tmp <= 60.0:
+   
+   if refGtEnd == 0 or altLeEnd == 0:
+      if refLeEnd == 0 or altGtEnd == 0:
+         return(fltrs)
+      else:
+         oddsRatio = float("inf")   
+   else:
+      oddsRatio = float(refLeEnd*altGtEnd)/(refGtEnd*altLeEnd)   
+   if oddsRatio >= 0.05 or (not isRna and vaf_tmp > 60.0):
+      return(fltrs)
+   
+   pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]
+   if pvalue < 0.001:
       fltrs.add('RPCP')
 
-   # output variables
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
@@ -246,7 +260,7 @@ def primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, vmf_tm
    oddsRatio = fisher[0]
    pvalue = fisher[1]
    # updated PrimerCP -- depend on UMI efficiency
-   if vmf_tmp < 40.0 and (altLeEnd + altGtEnd > 0) and (1.0 * altLeEnd / (altLeEnd + altGtEnd) >= 0.98 or (pvalue < 0.001 and oddsRatio < 0.05)):
+   if vmf_tmp < 40 and (altLeEnd + altGtEnd > 0) and (1.0 * altLeEnd / (altLeEnd + altGtEnd) >= 0.98 or (pvalue < 0.001 and oddsRatio < 0.05)):
       if rpb >= 4:
          isReal = hqUmiEff > 0.1 and vafToVmfRatio < 3.0 and RppEffSize < 2.5
       elif rpb >= 1.8:
@@ -264,19 +278,19 @@ def primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, vmf_tm
 #-------------------------------------------------------------------------------------
 def strict(fltrs, repTypeSet, vtype, vmf_tmp, primerDist, primerSidePrimerEndPos, origRef, origAlt):
    # homopolymer
-   if 'HP' in repTypeSet and vmf_tmp < 99.0:
+   if 'HP' in repTypeSet and vmf_tmp < 99:
       fltrs.add('HP')
    # low complexity
-   if 'LowC' in repTypeSet and vmf_tmp < 99.0:
+   if 'LowC' in repTypeSet and vmf_tmp < 99:
       fltrs.add('LowC')
    # tandom repeat
-   if 'RepT' in repTypeSet and vmf_tmp < 40.0:
+   if 'RepT' in repTypeSet and vmf_tmp < 40:
       fltrs.add('RepT')
    # simple repeat
-   if 'RepS' in repTypeSet and vmf_tmp < 40.0:
+   if 'RepS' in repTypeSet and vmf_tmp < 40:
       fltrs.add('RepS')  
    # satellites
-   if 'SL' in repTypeSet and vmf_tmp < 40.0:
+   if 'SL' in repTypeSet and vmf_tmp < 40:
       fltrs.add('SL')      	
 
    # PrimerCP (SNP only)

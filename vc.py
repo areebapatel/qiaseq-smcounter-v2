@@ -115,7 +115,7 @@ def getBaseAndBq(pileupRead, refseq, chrom, pos, minBQ):
       # if base quality not included in BAM
       if bq == None:
          bq = minBQ         
-	
+   
    # check if the site is the beginning of deletion
    elif pileupRead.indel < 0:
       site = pileupRead.alignment.query_sequence[pileupRead.query_position]
@@ -168,8 +168,8 @@ def hqRead(pileupRead,cigar,minMQ,mismatchThr):
    allTags = pileupRead.alignment.tags
    for (tag, value) in allTags:
       if tag == 'NM':
-	NM = value
-	break
+   NM = value
+   break
    nIndel = 0 # count number of INDELs in the read sequence
    cigarOrder = 1
    leftSP = 0  # soft clipped bases on the left
@@ -222,7 +222,7 @@ def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, 
       reverseCnt[base] += 1
    else:
       forwardCnt[base] += 1
-	
+   
    # update metrics for potential SNPs only; metrics will be used for filters
    if pileupRead.indel == 0 and not pileupRead.is_del:
       # count the number of low quality reads (less than Q20 by default) for each base
@@ -488,11 +488,11 @@ def consensus(bcDictHqBase, bcDictAll, bc, mtThreshold, bamType):
       cons = consHq if consHq == consAll else ''
    else:
       if len(tmpHqBc) == 2 and 'all' in tmpHqBc: 
-	del tmpHqBc['all']
-	cons = tmpHqBc.keys()[0]
+   del tmpHqBc['all']
+   cons = tmpHqBc.keys()[0]
       else:
-	cons = ''
-		 
+   cons = ''
+       
    # output
    return(cons)
 
@@ -648,11 +648,11 @@ def outlong(out_long, chrom, pos, ref, alt, vtype, origRef, origAlt, sMtCons, sM
 #-------------------------------------------------------------------------------------
 # function to call variants
 #-------------------------------------------------------------------------------------
-def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType,read_pileup,hqCache,infoCache):
+def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLength):
 
    # initiate variables
    sMtCons, smtSNP, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, strands, subTypeCnt, hqAgree, hqDisagree, allAgree, allDisagree, rpbCnt, sMtConsByBase, out_long = defineVariables()
-	
+   
    # find the reference base
    origRef = getRef(refseq,chrom,pos)
    
@@ -688,7 +688,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          origAlt = sortedList[alleleInd][0]
          maxVMT = sortedList[alleleInd][1]
 
-	# if the current allele has >= 3 UMIs and is not reference, treat as a candidate variant allele
+   # if the current allele has >= 3 UMIs and is not reference, treat as a candidate variant allele
          if origAlt == origRef:
             continue
          if maxVMT < minAltUMI and not firstAlt:
@@ -701,7 +701,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          primerBiasOR, bqAlt, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize = 'NA', -1.0, 0.0, 0.0, -1.0, -1.0, -1.0
          fltrs = set()
          repTypeSet = repTypeSet0
-		 
+       
          if vtype in ['SNP', 'INDEL'] and sMtCons > 0:
             # compute read- and UMI-level allele frequency and proportion of low base quality reads supporting the variant
             vaf_tmp = 100.0 * alleleCnt[origAlt] / cvg if cvg > 0 else 0.0 
@@ -714,13 +714,13 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
             fltrs = filters.dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt, origRef, vaf_tmp)
 
             # Initial HP and LowC region filters
-            repTypeSet, hpInfo = filters.isHPorLowComp(chrom, pos, hpLen, ref, alt, refseq, repTypeSet, hpInfo)
+            repTypeSet, hpInfo = filters.isHPorLowComp(chrom, pos, hpLen, ref, alt, refseq, repTypeSet, hpInfo, chromLength)
 
             # SNP-only common filters
             if vtype == 'SNP':
                # random (UMI) end position filters
-               fltrs = filters.rbcp(fltrs, endBase, mtSideBcEndPos, origRef, origAlt, vaf_tmp)
-               fltrs = filters.rpcp(fltrs, endBase, primerSideBcEndPos, origRef, origAlt, vaf_tmp)
+               fltrs = filters.rbcp(fltrs, endBase, mtSideBcEndPos, origRef, origAlt, vaf_tmp, isRna)
+               fltrs = filters.rpcp(fltrs, endBase, primerSideBcEndPos, origRef, origAlt, vaf_tmp, isRna)
                # proportion of low base quality reads
                if origAlt in alleleCnt and origAlt in lowQReads and alleleCnt[origAlt] > 0:
                   bqAlt = 1.0 * lowQReads[origAlt] / alleleCnt[origAlt]
@@ -728,22 +728,23 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
             ### original BAM only filters that use UMI efficiency metrics
             if bamType == 'raw':
                # UMI efficiency metrics; only for original BAM
-               vafToVmfRatio, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize = umiEfficiency(hqAgree, hqDisagree, allAgree, allDisagree, origRef, origAlt, rpbCnt, alleleCnt, sMtConsByBase, cvg, sMtCons, vaf_tmp, vmf_tmp)
-               # update HP for indel
-               fltrs = filters.hp4indel(fltrs, repTypeSet, vtype, rpb, hpInfo, vafToVmfRatio, vmf_tmp, hqUmiEff, RppEffSize, altRppUmiMean)             
-               # update other repetitive region filters for SNP and indel, including HP for SNP
-               fltrs = filters.rep4others(fltrs, repTypeSet, vtype, rpb, vafToVmfRatio, hqUmiEff, RppEffSize)
+               vafToVmfRatio, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize = umiEfficiency(hqAgree, hqDisagree, allAgree, allDisagree, origRef, origAlt, rpbCnt, alleleCnt, sMtConsByBase, cvg, sMtCons, vaf_tmp, vmf_tmp)               
+               if not isRna:
+                  # update HP for indel
+                  fltrs = filters.hp4indel(fltrs, repTypeSet, vtype, rpb, hpInfo, vafToVmfRatio, vmf_tmp, hqUmiEff, RppEffSize, altRppUmiMean)             
+                  # update other repetitive region filters for SNP and indel, including HP for SNP
+                  fltrs = filters.rep4others(fltrs, repTypeSet, vtype, rpb, vafToVmfRatio, hqUmiEff, RppEffSize)
                # primer bias filter
                fltrs, primerBiasOR = filters.pb(fltrs, origAlt, sMtConsByDir, sMtConsByDirByBase)
                if vtype == 'SNP':
                   # low base quality filter
-                  fltrs = filters.lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt)
+                  fltrs = filters.lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt, isRna)
                   # fixed end (gene specific primers) position filter
                   fltrs = filters.primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, vmf_tmp, hqUmiEff, vafToVmfRatio, RppEffSize, rpb)
-				  
-	   ### consensus BAM only filters; use more strict repetitive and primerOR filters; Discard LowQ filter because the base qualities have different meanings
+              
+            ### consensus BAM only filters; use more strict repetitive and primerOR filters; Discard LowQ filter because the base qualities have different meanings
             else:
-	      fltrs = filters.strict(fltrs, repTypeSet, vtype, vmf_tmp, primerDist, primerSidePrimerEndPos, origRef, origAlt)
+               fltrs = filters.strict(fltrs, repTypeSet, vtype, vmf_tmp, primerDist, primerSidePrimerEndPos, origRef, origAlt)
 
          firstAlt = False
          # output metrics for each non-reference allele with >= 3 UMIs; If none, output the one with most UMI
@@ -752,13 +753,13 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          altCnt += 1
          if altCnt >= maxAltAllele:
             break
-			
+   
    return (out_long, out_bkg, hqCache, infoCache)
 
 #------------------------------------------------------------------------------------------------
 # wrapper function for "vc()" - because Python multiprocessing module does not pass stack trace; from runone/smcounter.py by John Dicarlo
 #------------------------------------------------------------------------------------------------
-def vc_wrapper(general_args,interval):
+def vc_wrapper(general_args, interval):
    try:
       output = []
       hqCache = {}
@@ -770,8 +771,12 @@ def vc_wrapper(general_args,interval):
       intervalEndPos = interval[-1][1]
       
       refseq = pysam.FastaFile(refg)
+      chromLenghts = {}
+      for idx in range(len(refseq.lengths)):
+         chromLenghts[refseq.references[idx]] = refseq.lengths[idx]
+         
       i = 0
-      for read_pileup in pileup(bamName,chrom,intervalStartPos,intervalEndPos):
+      for read_pileup in pileup(bamName, chrom, intervalStartPos, intervalEndPos):
          site = interval[i]
          i+=1
          chrom,pos,repType,hpInfo,srInfo,repInfo = site
@@ -783,15 +788,15 @@ def vc_wrapper(general_args,interval):
             output.append(out)
             continue
          
-         temp = [bamName,chrom,pos,repType,hpInfo,srInfo,repInfo,minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds,bamType,read_pileup,hqCache,infoCache]
+         temp = [bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLenghts[chrom]]
          out_long,out_bkg,hqCache,infoCache = vc(*temp)
-         out = [out_long,out_bkg]
+         out = [out_long, out_bkg]
          output.append(out)
          
    except Exception as e:
-      out = ("Exception thrown!\n" + traceback.format_exc(),"no_bg")
+      out = ("Exception thrown!\n" + traceback.format_exc(), "no_bg")
       output.append(out)
-      logger.info("Exception thrown in vc() function at genome location : {pos} in interval : {chrom}:{it1}-{it2}".format(pos=pos,chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
+      logger.info("Exception thrown in vc() function at genome location : {pos} in interval : {chrom}:{it1}-{it2}".format(pos=pos, chrom=chrom, it1=intervalStartPos, it2=intervalEndPos))
       logger.info(out[0])
       raise Exception(e)
    

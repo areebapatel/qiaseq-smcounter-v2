@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# vim: tabstop=9 expandtab shiftwidth=3 softtabstop=3
 
 import os
 import subprocess
@@ -49,7 +48,7 @@ def argParseInit():
    parser.add_argument('--refGenome',type=str,help='Path to the reference fasta file')
    parser.add_argument('--repBed',type=str,help='Path to the simpleRepeat bed file')
    parser.add_argument('--srBed',type=str,help='Path to the full repeat bed file')
-   parser.add_argument('--ds', type=int, default=10000, help='down sample if number of UMIs greater than this value (for RNA only)')
+   parser.add_argument('--ds', type=int, default=10000, help='down sample if number of UMIs greater than this value (RNA only)')
    parser.add_argument('--bamType', type=str, default='raw', help='raw (default): raw BAM file with UMIs; consensus: consensused BAM file')
    parser.add_argument('--inputVCF', type=str, default='none', help='optional input VCF file;') 
 

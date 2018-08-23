@@ -15,13 +15,10 @@ def getMeanRpb(bamName):
    # fetch all reads
    for read in samfile.fetch():
       # read ID
-      qname = read.query_name
+      allFragSet.add(read.query_name)
       
-      # barcode sequence
-      BC = read.get_tag(mtTag)
-
-      allFragSet.add(qname)
-      allBcSet.add(BC)
+      # barcode sequence          
+      allBcSet.add(read.get_tag(mtTag))
 
    # total fragment count
    totalFrag = len(allFragSet)
@@ -30,14 +27,15 @@ def getMeanRpb(bamName):
    # mean rpb
    meanRpb = float(totalFrag) / totalMT
    samfile.close()
+   
    return meanRpb
 
 #-------------------------------------------------------------------------------------
 # find homopolymer sequences
 #-------------------------------------------------------------------------------------
-def findhp(bedName, outName, minLength,refg,seqType='dna'):
+def findhp(bedName, outName, minLength, refg, isRna):
    # how much to extend the roi to search for homopolymers
-   extensionLen = 0 if seqType == 'rna' else 100
+   extensionLen = 0 if isRna else 100
    
    # loop over roi BED
    outfile = open(outName, 'w')
@@ -109,14 +107,9 @@ def vcf2bed(inputVCF):
 #------------------------------------------------------------------------------------------------
 def getHpInfo(bedTarget, refGenome, isRna, hpLen):
    # intersect repeats and target regions
-   if isRna: 
-      seqType = 'rna'
-      findHpLen = hpLen
-   else:   
-      seqType = 'dna'
-      findHpLen = 6
+   findHpLen = hpLen if isRna else 6
 
-   findhp(bedTarget, 'hp.roi.bed', findHpLen, refGenome, seqType)
+   findhp(bedTarget, 'hp.roi.bed', findHpLen, refGenome, isRna)
    
    # gather homopolymer region info
    hpRegion = defaultdict(list)
@@ -125,7 +118,6 @@ def getHpInfo(bedTarget, refGenome, isRna, hpLen):
          chrom, regionStart, regionEnd, repType, totalLen, realL, realR, repBase = line.strip().split()
          hpRegion[chrom].append([regionStart, regionEnd, repType, totalLen, realL, realR])
    
-   # output variables
    return(hpRegion)
    
 #----------------------------------------------------------------------------------------------
@@ -163,7 +155,6 @@ def getTrInfo(bedTarget, repBed, isRna, hpLen):
          repType = 'RepT'
          repRegion[chrom].append([regionStart, regionEnd, repType, totalLen, unitLen, repLen])
    
-   # output variables
    return(repRegion)
    
 #----------------------------------------------------------------------------------------------
@@ -201,7 +192,6 @@ def getOtherRepInfo(bedTarget, srBed, isRna, hpLen):
          
          srRegion[chrom].append([regionStart, regionEnd, repType, totalLen, unitLen, repLen])
    
-   # output variables
    return(srRegion)
 
 #----------------------------------------------------------------------------------------------
@@ -264,7 +254,4 @@ def getLocList(bedTarget, hpRegion, repRegion, srRegion):
          if len(interval) > 0:
             locList.append(interval)
    
-   # output variables
    return(locList)
-   
-   
