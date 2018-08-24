@@ -144,7 +144,7 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
       altF = forwardCnt[origAlt]
       
       if refF == 0 or altR == 0:
-         if (refR == 0 or altF == 0:         
+         if refR == 0 or altF == 0:         
             return(fltrs)
          else:
             oddsRatio = float("inf")
