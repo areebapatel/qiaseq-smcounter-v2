@@ -791,5 +791,6 @@ def vc_wrapper(general_args, interval):
       raise Exception(e)
    
    refseq.close()
-   logger.info("Finished processing interval {chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
+   logger.info("Finished processing interval:")
+   logger.info("{chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
    return output

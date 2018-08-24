@@ -4,6 +4,11 @@ import subprocess
 from collections import defaultdict
 import pysam
 
+mtTag = "Mi"
+mqTag = "MQ"
+tagSeparator = "-"
+primerTag = "pr"
+
 #-------------------------------------------------------------------------------------
 # calculate mean rpb
 #-------------------------------------------------------------------------------------
