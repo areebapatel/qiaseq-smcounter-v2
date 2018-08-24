@@ -60,12 +60,12 @@ def biAllelicVar(alleles, RepRegion, outVcf, outVariants):
 # function to handle multi-allelic variants
 #--------------------------------------------------------------------------------------
 def multiAllelicVar(alleles, RepRegion, outVcf, outVariants):
-  ID = '.'
-  tmpAlleles = [x for x in alleles if x[-1] == 'PASS']
-  lenTmpAlleles = len(tmpAlleles)
-  if lenTmpAlleles == 0:
+   ID = '.'
+   tmpAlleles = [x for x in alleles if x[-1] == 'PASS']
+   lenTmpAlleles = len(tmpAlleles)
+   if lenTmpAlleles == 0:
      pass
-  elif lenTmpAlleles == 1:
+   elif lenTmpAlleles == 1:
      chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr = tmpAlleles[0]
      INFO = ';'.join(
             ['TYPE=' +typ,'RepRegion=' + RepRegion,'DP='+dp,'UMT='+umt,'VMT='+vmt,
@@ -117,10 +117,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants):
      allVMFs = ','.join(VMFs)
      allDPs = ','.join(DPs)
 
-     INFO = ';'.join(
-            ['TYPE=' +allTypes,'RepRegion=' + RepRegion,'DP='+allDPs,'UMT='+umt,'VMT='+allVMTs,
-             'VMF='+allVMFs]
-         )          
+     INFO = ';'.join(['TYPE=' +allTypes,'RepRegion=' + RepRegion,'DP='+allDPs,'UMT='+umt,'VMT='+allVMTs,'VMF='+allVMFs])
      FORMAT = 'GT:AD:VF' 
      gt = assign_gt(finalAlt,chrom,allVMFs)
      ad = assign_ad(umt,allVMTs)   
@@ -259,4 +256,3 @@ def makeVcf(runPath, outlong, sampleName):
    outVariants.close()
    outVcf.close()
    outLowPi.close()
-

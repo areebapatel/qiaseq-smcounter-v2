@@ -80,7 +80,7 @@ def vcf2bed(inputVCF):
    outf = open(outBed, 'w')
    for line in open(inputVCF, 'r'):
       if line[0] == '#':
-	continue
+         continue
       lineList = line.strip().split('\t')
       # only the chrom and position matters
       chrom, pos = lineList[:2]
@@ -98,10 +98,10 @@ def vcf2bed(inputVCF):
       # save to output
       outline = '\t'.join([bed_chrom, bed_start, bed_end]) + '\n'
       outf.write(outline)
-	  
+   
    outf.close()
    return(outBed)   
-	     
+
 #----------------------------------------------------------------------------------------------
 # get homopolymer region information
 #------------------------------------------------------------------------------------------------

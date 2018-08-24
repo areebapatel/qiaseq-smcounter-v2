@@ -73,14 +73,14 @@ def main(args):
    
    for argName, argVal in vars(args).iteritems():
       print(argName, argVal)
-      
+   
    # change working directory to runDir and make output directories
    if args.runPath != None:
       os.chdir(args.runPath)
    # make /intermediate directory to keep the long output
    if not os.path.exists('intermediate'):
       os.makedirs('intermediate')
-
+   
    # convert VCF to BED if inputVCF is not 'none'
    bedTarget = args.bedTarget if args.inputVCF == 'none' else utils.vcf2bed(args.inputVCF)
    
@@ -88,10 +88,10 @@ def main(args):
    hpRegion = utils.getHpInfo(bedTarget, args.refGenome, args.isRna, args.hpLen)
    repRegion = utils.getTrInfo(bedTarget, args.repBed, args.isRna, args.hpLen)
    srRegion = utils.getOtherRepInfo(bedTarget, args.srBed, args.isRna, args.hpLen)
-
+   
    # read in bed file and create a list of positions, annotated with repetitive region
    locList = utils.getLocList(bedTarget, hpRegion, repRegion, srRegion)
-
+   
    # calculate rpb if args.rpb = 0
    if args.rpb == 0.0:
       if args.bamType == 'raw':
@@ -106,10 +106,10 @@ def main(args):
       
    # set primer side
    primerSide = 'R1' if args.primerSide == 1 else 'R2'
-
+   
    # set type of input BAM file
    bamType = 'raw' if args.bamType == 'raw' else 'consensus'
-
+   
    #----- loop over locs
    # prepare to save to disk
    outfile_long = open('intermediate/nopval.' + args.outPrefix + '.VariantList.long.txt', 'w')
@@ -117,10 +117,10 @@ def main(args):
    outfile_bkg = open(bkgFileName, 'w')
    outfile_long.write('\t'.join(header_1) + '\n')
    outfile_bkg.write('\t'.join(header_2) + '\n')
-
+   
    pool = multiprocessing.Pool(args.nCPU)
    func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType))
-
+   
    # process exons/intervals from bed file in parallel
    for interval_result in pool.map(func,locList):
       for base_result in interval_result:
@@ -134,7 +134,7 @@ def main(args):
    # close output file handles
    outfile_long.close()
    outfile_bkg.close()
-
+   
    # calculate p-value
    print("Calculating p-values at " + str(datetime.datetime.now()) + "\n")
    outfile1 = 'intermediate/nopval.' + args.outPrefix + '.VariantList.long.txt'
@@ -147,7 +147,7 @@ def main(args):
 
    ## make VCFs
    vcf.makeVcf(args.runPath, outfile2, args.outPrefix)
-
+   
    # remove intermediate files
    os.remove('hp.roi.bed')
    os.remove('rep.roi.bed')

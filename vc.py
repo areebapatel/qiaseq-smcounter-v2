@@ -62,7 +62,6 @@ def defineVariables():
 def getRef(refseq, chrom, pos):
    origRef = refseq.fetch(reference=chrom, start=int(pos)-1, end=int(pos))
    origRef = origRef.upper()
-   # output variables
    return(origRef)
   
 #-------------------------------------------------------------------------------------
@@ -86,7 +85,6 @@ def dropRead(pileupRead, pos, cigar):
       elif op in [0, 3]:
          alignLen -= value
    
-   # output variables
    return(isDrop)
 
 #-------------------------------------------------------------------------------------
@@ -137,7 +135,6 @@ def getBaseAndBq(pileupRead, refseq, chrom, pos, minBQ):
       base = pileupRead.alignment.query_sequence[pileupRead.query_position] # note: query_sequence includes soft clipped bases
       bq = pileupRead.alignment.query_qualities[pileupRead.query_position]
 
-   # output variables
    return(base, bq)
 
 #-------------------------------------------------------------------------------------
@@ -168,8 +165,8 @@ def hqRead(pileupRead,cigar,minMQ,mismatchThr):
    allTags = pileupRead.alignment.tags
    for (tag, value) in allTags:
       if tag == 'NM':
-   NM = value
-   break
+         NM = value
+         break
    nIndel = 0 # count number of INDELs in the read sequence
    cigarOrder = 1
    leftSP = 0  # soft clipped bases on the left
@@ -251,7 +248,6 @@ def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSP, mtSide, 
    # coverage -- read, not fragment
    cvg += 1
    
-   # output variables
    return(alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg)
 
 #-------------------------------------------------------------------------------------
@@ -291,7 +287,6 @@ def groupByUMI(readid, BC, base, pairOrder, usedFrag, allFrag, incCond, hpCovere
       bcDictAll[BC][base]+=1
       bcDictAll[BC]['all']+=1
    
-   # output variables
    return(allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag)
 
 #-------------------------------------------------------------------------------------
@@ -493,7 +488,6 @@ def consensus(bcDictHqBase, bcDictAll, bc, mtThreshold, bamType):
       else:
    cons = ''
        
-   # output
    return(cons)
 
 #-------------------------------------------------------------------------------------
@@ -539,7 +533,6 @@ def updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, all
          smtSNP += 1
          strands[primerDirection] += 1
 
-   # output variables
    return(hqAgree, hqDisagree, allAgree, allDisagree, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands)
 
 #-------------------------------------------------------------------------------------
@@ -572,7 +565,6 @@ def setRefAltType(origRef, origAlt):
          ref = vals[1]
          alt = vals[2]
 
-   # output variables
    return(ref, alt, vtype)
 
 #-------------------------------------------------------------------------------------
@@ -603,7 +595,6 @@ def umiEfficiency(hqAgree, hqDisagree, allAgree, allDisagree, origRef, origAlt, 
 
    vafToVmfRatio = 1.0 * vaf_tmp / vmf_tmp if vmf_tmp > 0 else -1.0
 
-   # output variables
    return (vafToVmfRatio, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize)
 
 
@@ -642,7 +633,6 @@ def outlong(out_long, chrom, pos, ref, alt, vtype, origRef, origAlt, sMtCons, sM
    out_long_allele = '\t'.join(out_long_list) + '\n'
    out_long += out_long_allele
 
-   # output variables
    return(out_long)
    
 #-------------------------------------------------------------------------------------
