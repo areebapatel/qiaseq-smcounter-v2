@@ -483,10 +483,10 @@ def consensus(bcDictHqBase, bcDictAll, bc, mtThreshold, bamType):
       cons = consHq if consHq == consAll else ''
    else:
       if len(tmpHqBc) == 2 and 'all' in tmpHqBc: 
-   del tmpHqBc['all']
-   cons = tmpHqBc.keys()[0]
+         del tmpHqBc['all']
+         cons = tmpHqBc.keys()[0]
       else:
-   cons = ''
+         cons = ''
        
    return(cons)
 
