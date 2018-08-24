@@ -79,7 +79,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants):
      outVcf.write(vcfLine)
      cutVarLine = '\t'.join([chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fltr]) + '\n'
      outVariants.write(cutVarLine)
-  else:
+   else:
      VDPs, VAFs, VMTs, UMTs, VMFs, QUALs, fQUALs, TYPEs, REFs, ALTs, DPs = [], [], [], [], [], [], [], [], [], [], []
      for allele in tmpAlleles:
         chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr = allele
