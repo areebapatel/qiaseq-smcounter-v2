@@ -795,5 +795,5 @@ def vc_wrapper(general_args, interval):
    refseq.close()
    timeEnd = datetime.datetime.now()
    logger.info("Finished processing interval:")
-   logger.info(str(timeEnd-timeStart) + "{chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
+   logger.info(str(timeEnd-timeStart) + "\t" + "{chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
    return output
