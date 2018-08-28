@@ -750,6 +750,8 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
 # wrapper function for "vc()" - because Python multiprocessing module does not pass stack trace; from runone/smcounter.py by John Dicarlo
 #------------------------------------------------------------------------------------------------
 def vc_wrapper(general_args, interval):
+   timeStart = datetime.datetime.now()
+   
    try:
       output = []
       hqCache = {}
@@ -788,9 +790,10 @@ def vc_wrapper(general_args, interval):
       output.append(out)
       logger.info("Exception thrown in vc() function at genome location : {pos} in interval : {chrom}:{it1}-{it2}".format(pos=pos, chrom=chrom, it1=intervalStartPos, it2=intervalEndPos))
       logger.info(out[0])
-      raise Exception(e)
-   
+      raise Exception(e)   
+     
    refseq.close()
+   timeEnd = datetime.datetime.now()
    logger.info("Finished processing interval:")
-   logger.info("{chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
+   logger.info(str(timeEnd-timeStart) + "{chrom}:{it1}-{it2}".format(chrom=chrom,it1=intervalStartPos,it2=intervalEndPos))
    return output
