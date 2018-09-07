@@ -8,23 +8,23 @@
 
 rm(list=ls())
 library(plyr)
-bkgErrorDistSimulation <- '/srv/qgen/data/annotation/bkg.error.v2.RData'
 
 ##############################
 ##       Parameters         ##
 ##############################
 args <- commandArgs(TRUE)
 wd <- args[1]
-outlong <- args[2]
-bkgfile <- args[3]
-seed <- as.numeric(args[4])
-nsim <- as.numeric(args[5])
-outfile_pval <- args[6]
-outfile_bedgraph <- args[7]
-outprefix <- args[8]
-rpb <- as.numeric(args[9])
-minAltUMI <- as.numeric(args[10])
-inputVCF <- args[11]
+bkgErrorDistSimulation <- args[2]
+outlong <- args[3]
+bkgfile <- args[4]
+seed <- as.numeric(args[5])
+nsim <- as.numeric(args[6])
+outfile_pval <- args[7]
+outfile_bedgraph <- args[8]
+outprefix <- args[9]
+rpb <- as.numeric(args[10])
+minAltUMI <- as.numeric(args[11])
+inputVCF <- args[12]
 min.mtDepth <- 1000
 
 # set working directory

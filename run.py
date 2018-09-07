@@ -50,8 +50,10 @@ def argParseInit():
    parser.add_argument('--srBed',type=str,help='Path to the full repeat bed file')
    parser.add_argument('--ds', type=int, default=10000, help='down sample if number of UMIs greater than this value (RNA only)')
    parser.add_argument('--bamType', type=str, default='raw', help='raw (default): raw BAM file with UMIs; consensus: consensused BAM file')
-   parser.add_argument('--inputVCF', type=str, default='none', help='optional input VCF file;') 
-
+   parser.add_argument('--inputVCF', type=str, default='none', help='optional input VCF file') 
+   parser.add_argument('--bkgErrorDistSimulation', type=str, default='/srv/qgen/data/annotation/bkg.error.v2.RData', help='required background error data') 
+   
+   
 #--------------------------------------------------------------------------------------
 # main function
 #--------------------------------------------------------------------------------------
@@ -141,7 +143,7 @@ def main(args):
 
    outfile2 = 'intermediate/' + args.outPrefix + '.VariantList.long.txt'
    outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
-   pValCmd = ' '.join(['Rscript', pValCode, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
+   pValCmd = ' '.join(['Rscript', pValCode, args.bkgErrorDistSimulation, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
    subprocess.check_call(pValCmd, shell=True)
    print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
