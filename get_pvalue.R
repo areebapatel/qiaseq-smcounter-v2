@@ -13,8 +13,8 @@ library(plyr)
 ##       Parameters         ##
 ##############################
 args <- commandArgs(TRUE)
-wd <- args[1]
-bkgErrorDistSimulation <- args[2]
+bkgErrorDistSimulation <- args[1]
+wd <- args[2]
 outlong <- args[3]
 bkgfile <- args[4]
 seed <- as.numeric(args[5])
