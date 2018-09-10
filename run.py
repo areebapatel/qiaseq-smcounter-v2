@@ -144,7 +144,7 @@ def main(args):
 
    outfile2 = 'intermediate/' + args.outPrefix + '.VariantList.long.txt'
    outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
-   pValCmd = ' '.join(['Rscript', pValCode, args.bkgErrorDistSimulation, args.runPath, outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
+   pValCmd = ' '.join(['Rscript', pValCode, args.bkgErrorDistSimulation, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
    subprocess.check_call(pValCmd, shell=True)
    print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
