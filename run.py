@@ -149,7 +149,7 @@ def main(args):
    print("completed p-values at " + str(datetime.datetime.now()) + "\n")
 
    ## make VCFs
-   vcf.makeVcf(args.runPath, outfile2, args.outPrefix)
+   vcf.makeVcf('./', outfile2, args.outPrefix)
    
    # remove intermediate files
    os.remove('hp.roi.bed')
