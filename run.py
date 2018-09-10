@@ -118,13 +118,13 @@ def main(args):
    bkgFileName = 'intermediate/bkg.' + args.outPrefix + '.txt'
    outfile_bkg = open(bkgFileName, 'w')
    outfile_long.write('\t'.join(header_1) + '\n')
-   outfile_bkg.write('\t'.join(header_2) + '\n')
+   outfile_bkg.write('\t'.join(header_2) + '\n')   
    
+   print("Finished processing interval:")
    pool = multiprocessing.Pool(args.nCPU)
    func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType))
    
-   # process exons/intervals from bed file in parallel
-   print("Finished processing interval:")
+   # process exons/intervals from bed file in parallel   
    for interval_result in pool.map(func,locList):
       for base_result in interval_result:
          vcOutline,bkgOutline = base_result
