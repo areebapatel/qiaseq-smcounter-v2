@@ -124,6 +124,7 @@ def main(args):
    func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType))
    
    # process exons/intervals from bed file in parallel
+   print("Finished processing interval:")
    for interval_result in pool.map(func,locList):
       for base_result in interval_result:
          vcOutline,bkgOutline = base_result
