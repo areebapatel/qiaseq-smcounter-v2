@@ -60,7 +60,7 @@ def argParseInit():
 def main(args):
    # log run start
    timeStart = datetime.datetime.now()
-   print("started at " + str(timeStart))
+   print("started " + str(timeStart))
    
    # if argument parser global not assigned yet, initialize it
    if parser == None:
@@ -120,7 +120,7 @@ def main(args):
    outfile_long.write('\t'.join(header_1) + '\n')
    outfile_bkg.write('\t'.join(header_2) + '\n')   
    
-   print("Finished processing interval:")
+   print('runtime' + '\t' + 'interval')
    pool = multiprocessing.Pool(args.nCPU)
    func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType))
    
@@ -139,14 +139,14 @@ def main(args):
    outfile_bkg.close()
    
    # calculate p-value
-   print("Calculating p-values at " + str(datetime.datetime.now()) + "\n")
+   print("Calculating p-values " + str(datetime.datetime.now()) + "\n")
    outfile1 = 'intermediate/nopval.' + args.outPrefix + '.VariantList.long.txt'
 
    outfile2 = 'intermediate/' + args.outPrefix + '.VariantList.long.txt'
    outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
    pValCmd = ' '.join(['Rscript', pValCode, args.bkgErrorDistSimulation, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
    subprocess.check_call(pValCmd, shell=True)
-   print("completed p-values at " + str(datetime.datetime.now()) + "\n")
+   print("completed p-values " + str(datetime.datetime.now()) + "\n")
 
    ## make VCFs
    vcf.makeVcf('./', outfile2, args.outPrefix)
@@ -159,8 +159,8 @@ def main(args):
 
    # log run completion
    timeEnd = datetime.datetime.now()
-   print("completed running at " + str(timeEnd) + "\n")
-   print("total time: "+ str(timeEnd-timeStart) + "\n")  
+   print("completed running " + str(timeEnd) + "\n")
+   print("total runtime: "+ str(timeEnd-timeStart) + "\n")  
    
 #-----------------------------------------------------------------------------------
 # pythonism to run from the command line
