@@ -145,11 +145,14 @@ def main(args):
    outfile2 = 'intermediate/' + args.outPrefix + '.VariantList.long.txt'
    outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
    pValCmd = ' '.join(['Rscript', pValCode, args.bkgErrorDistSimulation, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpb), str(args.minAltUMI), args.inputVCF])
-   subprocess.check_call(pValCmd, shell=True)
-   print("completed p-values " + str(datetime.datetime.now()) + "\n")
+   if len(locList):
+      subprocess.check_call(pValCmd, shell=True)
+      print("completed p-values " + str(datetime.datetime.now()) + "\n")
 
-   ## make VCFs
-   vcf.makeVcf('./', outfile2, args.outPrefix)
+      # make VCFs
+      vcf.makeVcf('./', outfile2, args.outPrefix)
+   else:
+      print("empty BED or BAM, no variants detected " + str(datetime.datetime.now()) + "\n")
    
    # remove intermediate files
    os.remove('hp.roi.bed')
