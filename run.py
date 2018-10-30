@@ -150,7 +150,7 @@ def main(args):
       print("completed p-values " + str(datetime.datetime.now()) + "\n")
 
       # make VCFs
-      vcf.makeVcf('./', outfile2, args.outPrefix)
+      vcf.makeVcf('./', outfile2, args.outPrefix, args.refGenome)
    else:
       print("empty BED or BAM, no variants detected " + str(datetime.datetime.now()) + "\n")
    

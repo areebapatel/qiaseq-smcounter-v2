@@ -130,7 +130,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants):
 #--------------------------------------------------------------------------------------
 # main function
 #--------------------------------------------------------------------------------------
-def makeVcf(runPath, outlong, sampleName):
+def makeVcf(runPath, outlong, sampleName, refGenome):
    # change working directory to runDir
    os.chdir(runPath)
    outAll = open(sampleName + '.smCounter.all.txt', 'w')
@@ -147,7 +147,7 @@ def makeVcf(runPath, outlong, sampleName):
    headerLowPi = ['READ_SET','CHROM','POS','ID','REF','ALT','QUAL','FILTER','TYPE','RepRegion','DP','UMT','VMT','VMF']
    
    headerVcf = '##fileformat=VCFv4.2' + '\n' + \
-         '##reference=GRCh37' + '\n' + \
+         '##reference={ref}'.format(ref=refGenome) + '\n' + \
          '##FILTER=<ID=LM,Description="Low coverage (fewer than 5 barcodes)">' + '\n' + \
          '##FILTER=<ID=RepT,Description="Variant in tandem repeat (TFR) regions">' + '\n' + \
          '##FILTER=<ID=RepS,Description="Variant in simple repeats (RepeatMasker) regions">' + '\n' + \
