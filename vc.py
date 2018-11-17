@@ -310,7 +310,7 @@ def pileup(bamName,chrom,start,end):
 #-------------------------------------------------------------------------------------
 # pile up reads and group by UMI; some metrics are updated here
 #-------------------------------------------------------------------------------------
-def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache, umiTag, primerTag, mqTag):
+def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache, umiTag, primerTag, mqTag, tagSeparator):
 
    # define variables
    cvg, usedFrag, allFrag = 0, 0, 0
@@ -777,7 +777,7 @@ def vc_wrapper(general_args, interval):
             output.append(out)
             continue
          
-         temp = [bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLenghts[chrom],umiTag, primerTag, mqTag, tagSeparator]
+         temp = [bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLenghts[chrom], umiTag, primerTag, mqTag, tagSeparator]
          out_long,out_bkg,hqCache,infoCache = vc(*temp)
          out = [out_long, out_bkg]
          output.append(out)
