@@ -4,15 +4,10 @@ import subprocess
 from collections import defaultdict
 import pysam
 
-mtTag = "Mi"
-mqTag = "MQ"
-tagSeparator = "-"
-primerTag = "pr"
-
 #-------------------------------------------------------------------------------------
 # calculate mean rpb
 #-------------------------------------------------------------------------------------
-def getMeanRpb(bamName):
+def getMeanRpb(bamName, umiTag):
    samfile = pysam.AlignmentFile(bamName, 'rb')
    allFragSet = set()
    allBcSet = set()
@@ -23,7 +18,7 @@ def getMeanRpb(bamName):
       allFragSet.add(read.query_name)
       
       # barcode sequence          
-      allBcSet.add(read.get_tag(mtTag))
+      allBcSet.add(read.get_tag(umiTag))
 
    # total fragment count
    totalFrag = len(allFragSet)

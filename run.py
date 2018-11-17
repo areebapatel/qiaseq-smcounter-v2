@@ -43,6 +43,10 @@ def argParseInit():
    parser.add_argument('--rpb', type=float, default=0.0, help='mean read pairs per UMI; default at 0 and will be calculated')
    parser.add_argument('--isRna', action = 'store_true', help='RNAseq varinat calling only; default is DNAseq')
    parser.add_argument('--primerSide', type=int, default=1, help='read end that includes the primer; default is 1')
+   parser.add_argument('--umiTag', type=str, default='Mi', help='Tag name for UMI')
+   parser.add_argument('--primerTag', type=str, default='pr', help='Tag name for Primer')
+   parser.add_argument('--mqTag', type=str, default='MQ', help='Tag name for MapQ score of mate')
+   parser.add_argument('--tagSeparator', type=str, default='-', help='Tag seperator for splitting UMI tag') 
    parser.add_argument('--minAltUMI', type=int, default=3, help='minimum requirement of ALT UMIs; default is 3')
    parser.add_argument('--maxAltAllele', type=int, default=2, help='maximum ALT alleles that meet minAltUMI to be reported; default is 2 (tri-allelic variants)')
    parser.add_argument('--refGenome',type=str,help='Path to the reference fasta file')
@@ -97,7 +101,7 @@ def main(args):
    # calculate rpb if args.rpb = 0
    if args.rpb == 0.0:
       if args.bamType == 'raw':
-         rpb = utils.getMeanRpb(args.bamFile) 
+         rpb = utils.getMeanRpb(args.bamFile, args.umiTag) 
          print("rpb = " + str(round(rpb,1)) + ", computed by smCounter2")
       else:
          rpb = 5.0
@@ -122,7 +126,7 @@ def main(args):
    
    print('runtime' + '\t' + 'interval')
    pool = multiprocessing.Pool(args.nCPU)
-   func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType))
+   func = functools.partial(vc_wrapper,(args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.mtThreshold, rpb, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator))
    
    # process exons/intervals from bed file in parallel   
    for interval_result in pool.map(func,locList):
