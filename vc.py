@@ -24,10 +24,7 @@ logger.addHandler(ch)
 minTotalUMI = 5
 lowBqThr = 20
 endBase = 20
-mtTag = "Mi"
-mqTag = "MQ"
-tagSeparator = "-"
-primerTag = "pr"
+
 _num_cols_ = 38 ## Number of columns in out_long returned by the vc() function of smCounter
 maxDnaReadDepth = 1000000000
 downsamplePileupStackThr = 10 ** 5
@@ -90,9 +87,9 @@ def dropRead(pileupRead, pos, cigar):
 #-------------------------------------------------------------------------------------
 # get some basic information. NOTE: BC depends on the type of input BAM file
 #-------------------------------------------------------------------------------------   
-def getBasicInfo(pileupRead, bamType,readid):
+def getBasicInfo(pileupRead, bamType, readid, umiTag):
    # if the input BAM is consensused, use read ID as UMI barcode
-   BC = pileupRead.alignment.get_tag(mtTag) if bamType == 'raw' else readid
+   BC = pileupRead.alignment.get_tag(umiTag) if bamType == 'raw' else readid
    # cigar
    cigar = pileupRead.alignment.cigar
    # alignment positions
@@ -140,7 +137,7 @@ def getBaseAndBq(pileupRead, refseq, chrom, pos, minBQ):
 #-------------------------------------------------------------------------------------
 # check if a read is high quality and can be included in the bcDictHq
 #-------------------------------------------------------------------------------------   
-def hqRead(pileupRead,cigar,minMQ,mismatchThr):
+def hqRead(pileupRead,cigar,minMQ,mismatchThr,mqTag):
    # mapping quality filter - both R1 and R2 need to meet the minimum mapQ
    mq = pileupRead.alignment.mapping_quality
    minMQPass = True   
@@ -313,7 +310,7 @@ def pileup(bamName,chrom,start,end):
 #-------------------------------------------------------------------------------------
 # pile up reads and group by UMI; some metrics are updated here
 #-------------------------------------------------------------------------------------
-def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache):
+def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache, umiTag, primerTag, mqTag, tagSeparator):
 
    # define variables
    cvg, usedFrag, allFrag = 0, 0, 0
@@ -351,7 +348,7 @@ def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, mi
       if key in infoCache:
          BC,cigar,astart,aend = infoCache[key]
       else:
-         BC,cigar,astart,aend = getBasicInfo(pileupRead, bamType,readid)
+         BC,cigar,astart,aend = getBasicInfo(pileupRead, bamType,readid,umiTag)
          infoCache[key] = (BC,cigar,astart,aend)
 
       # check if read should be dropped
@@ -367,7 +364,7 @@ def pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, mi
          leftSP,incCondTemp = hqCache[key]
          incCond = incCondTemp and bq >= minBQ and hpCovered
       else:
-         leftSP, incCondTemp = hqRead(pileupRead,cigar,minMQ,mismatchThr)
+         leftSP, incCondTemp = hqRead(pileupRead,cigar,minMQ,mismatchThr,mqTag)
          incCond = incCondTemp and bq >= minBQ and hpCovered
          hqCache[key] = (leftSP,incCondTemp)
 
@@ -493,7 +490,7 @@ def consensus(bcDictHqBase, bcDictAll, bc, mtThreshold, bamType):
 #-------------------------------------------------------------------------------------
 # update the UMI metrics
 #-------------------------------------------------------------------------------------
-def updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, allAgree, allDisagree, origRef, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands):
+def updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, allAgree, allDisagree, origRef, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands, tagSeparator):
    # primer ID and direction
    bcSplit = bc.split(tagSeparator)
    primerDirCode = bcSplit[1]
@@ -638,7 +635,7 @@ def outlong(out_long, chrom, pos, ref, alt, vtype, origRef, origAlt, sMtCons, sM
 #-------------------------------------------------------------------------------------
 # function to call variants
 #-------------------------------------------------------------------------------------
-def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLength):
+def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLength, umiTag, primerTag, mqTag, tagSeparator):
 
    # initiate variables
    sMtCons, smtSNP, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, strands, subTypeCnt, hqAgree, hqDisagree, allAgree, allDisagree, rpbCnt, sMtConsByBase, out_long = defineVariables()
@@ -647,7 +644,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
    origRef = getRef(refseq,chrom,pos)
    
    # pile up and group reads by UMIs
-   alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache = pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache)
+   alleleCnt, forwardCnt, reverseCnt, lowQReads, mtSideBcEndPos, primerSideBcEndPos, primerSidePrimerEndPos, cvg, allBcDict, bcDictHq, bcDictAll, bcDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache = pileupAndGroupByUMI(bamName, bamType, chrom, pos, repType, hpInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, read_pileup, hqCache, infoCache, umiTag, primerTag, mqTag, tagSeparator)
    
    # gradually drop singleton UMIs; keep all UMIs for consensused BAM
    allMT = len(allBcDict)
@@ -663,7 +660,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLe
          # generate consensus
          cons = consensus(bcDictHqBase, bcDictAll, bc, mtThreshold, bamType)
          # update UMI-level metrics
-         hqAgree, hqDisagree, allAgree, allDisagree, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands = updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, allAgree, allDisagree, origRef, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands)
+         hqAgree, hqDisagree, allAgree, allDisagree, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands = updateUmiMetrics(bc, bcDictHqBase, cons, hqAgree, hqDisagree, bcDictAll, allAgree, allDisagree, origRef, sMtCons, sMtConsByBase, sMtConsByDir, sMtConsByDirByBase, rpbCnt, subTypeCnt, smtSNP, strands, tagSeparator)
 
       # output the background error profile
       out_bkg = outbkg(chrom, pos, origRef, subTypeCnt, strands, smtSNP)
@@ -756,7 +753,7 @@ def vc_wrapper(general_args, interval):
       output = []
       hqCache = {}
       infoCache = {}
-      bamName, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refg, minAltUMI, maxAltAllele, isRna, ds, bamType = general_args
+      bamName, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refg, minAltUMI, maxAltAllele, isRna, ds, bamType, umiTag, primerTag, mqTag, tagSeparator = general_args
 
       chrom = interval[0][0]
       intervalStartPos = interval[0][1]
@@ -780,7 +777,7 @@ def vc_wrapper(general_args, interval):
             output.append(out)
             continue
          
-         temp = [bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLenghts[chrom]]
+         temp = [bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBQ, minMQ, hpLen, mismatchThr, primerDist, mtThreshold, rpb, primerSide, refseq, minAltUMI, maxAltAllele, isRna, ds, bamType, read_pileup, hqCache, infoCache, chromLenghts[chrom], umiTag, primerTag, mqTag, tagSeparator]
          out_long,out_bkg,hqCache,infoCache = vc(*temp)
          out = [out_long, out_bkg]
          output.append(out)
