@@ -20,13 +20,14 @@ def getMeanRpb(bamName, umiTag):
       # barcode sequence          
       allBcSet.add(read.get_tag(umiTag))
 
+   samfile.close()
+   
    # total fragment count
    totalFrag = len(allFragSet)
    # total MT count
    totalMT = len(allBcSet)
    # mean rpb
-   meanRpb = float(totalFrag) / totalMT
-   samfile.close()
+   meanRpb = float(totalFrag) / totalMT if totalMT > 0 else 1.0   
    
    return meanRpb
 
