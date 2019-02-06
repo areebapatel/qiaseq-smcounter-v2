@@ -48,7 +48,7 @@ def biAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
    if tumorNormal:
       chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr, fetpval = alleles[0]
       INFO = ';'.join(
-         ['TYPE=' +typ, 'RepRegion='+RepRegion, 'TNFetPval='+fetpval,
+         ['TYPE=' +typ, 'RepRegion='+RepRegion, 'TNB='+fetpval,
           'DP='+dp, 'UMT='+umt, 'VMT='+vmt, 'VMF='+vmf])
    else:
       chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr = alleles[0]
@@ -75,7 +75,7 @@ def biAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
 #--------------------------------------------------------------------------------------
 def multiAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
    ID = '.'
-   if tumorNormalVar:
+   if tumorNormal:
       fltr_col = -2
    else:
       fltr_col = -1
@@ -91,7 +91,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
       if tumorNormal:
          chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr, fetpval = alleles[0]
          INFO = ';'.join(
-            ['TYPE=' +typ, 'RepRegion='+RepRegion, 'TNFetPval='+fetpval,
+            ['TYPE=' +typ, 'RepRegion='+RepRegion, 'TNB='+fetpval,
              'DP='+dp, 'UMT='+umt, 'VMT='+vmt, 'VMF='+vmf])
       else:
          chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr = tmpAlleles[0]
@@ -114,7 +114,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
       outVariants.write(cutVarLine)
 
    else:
-      VDPs, VAFs, VMTs, UMTs, VMFs, QUALs, fQUALs, TYPEs, REFs, ALTs, DPs, PVals = [], [], [], [], [], [], [], [], [], [], [], []
+      VDPs, VAFs, VMTs, UMTs, VMFs, QUALs, fQUALs, TYPEs, REFs, ALTs, DPs, Pvals = [], [], [], [], [], [], [], [], [], [], [], []
       for allele in tmpAlleles:
          if tumorNormal:
             chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr, fetpval = allele
@@ -159,7 +159,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
       if tumorNormal:
          allPvals = ','.join(Pvals)
          INFO = ';'.join(['TYPE=' +allTypes,'RepRegion=' + RepRegion,
-                          'TNFetPval=' + allPvals,
+                          'TNB=' + allPvals,
                           'DP='+allDPs,'UMT='+umt,'VMT='+allVMTs,'VMF='+allVMFs])
       else:
          INFO = ';'.join(['TYPE=' +allTypes,'RepRegion=' + RepRegion,
@@ -197,8 +197,8 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
    headerVariants = ['CHROM','POS','REF','ALT','TYPE','DP','VDP','VAF','sUMT','sVMT','sVMF','QUAL','FILTER']
 
    if tumorNormal:
-      headerAll.append('TNFetPval')
-      headerLowPi = ['READ_SET','CHROM','POS','ID','REF','ALT','QUAL','FILTER','TYPE','RepRegion','TNFetPval','DP','UMT','VMT','VMF']
+      headerAll.append('TNB')
+      headerLowPi = ['READ_SET','CHROM','POS','ID','REF','ALT','QUAL','FILTER','TYPE','RepRegion','TNB','DP','UMT','VMT','VMF']
    else:
       headerLowPi = ['READ_SET','CHROM','POS','ID','REF','ALT','QUAL','FILTER','TYPE','RepRegion','DP','UMT','VMT','VMF']
 
@@ -230,7 +230,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
 
    if tumorNormal:
       headerVcf = headerVcf + \
-         '##INFO=<ID=TNFetPval,Number=.,Type=Float,Description="FDR Corrected pvalue from Fischer\'s Exact Test">' + '\n'
+         '##INFO=<ID=TNB,Number=.,Type=Float,Description="FDR Corrected Phred-scaled p-value using Fisher\'s exact test to detect Tumor Normal Bias">' + '\n'
 
    headerVcf = headerVcf + \
          '##INFO=<ID=DP,Number=1,Type=Integer,Description="Total read depth">' + '\n' + \
@@ -260,7 +260,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
          outAll.write(tempLine)
          cnt += 1
          if tumorNormal:
-            CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logpval, FILTER, TnFetPval = line.strip().split('\t')
+            CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logpval, FILTER, TNFetPval = line.strip().split('\t')
          else:
             CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logpval, FILTER = line.strip().split('\t')
          
@@ -297,8 +297,8 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
          tempVar = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, FILTER)
          lenAlleles = len(alleles)
          if tumorNormal:
-            currentAllele.append(TNFetPval)
-            tempVar.append(TNFetPval)
+            currentAllele = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, fQUAL, FILTER, TNFetPval)
+            tempVar = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, fQUAL, FILTER, TNFetPval)
 
          if fQUAL < cutoff: ## Write to low-PI file
 
@@ -308,7 +308,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
                   FILTER.replace('_HomRef', '')
                   ALT = '.'
 
-               outLowPi.write('\t'.join([sampleName,CHROM,POS,".",REF,ALT,QUAL,FILTER,TYPE,TnFetPval,RepRegion,DP,sUMT,sVMT,sVMF]))
+               outLowPi.write('\t'.join([sampleName,CHROM,POS,".",REF,ALT,QUAL,FILTER,TYPE,RepRegion,TNFetPval,DP,sUMT,sVMT,sVMF]))
                outLowPi.write('\n')
 
             else:
