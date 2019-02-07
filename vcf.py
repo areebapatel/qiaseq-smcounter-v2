@@ -63,7 +63,7 @@ def biAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
 
    if fltr.find('LOH_HomRef') != -1:
       alt = '.'
-      fltr.replace('_HomRef','')
+      fltr = fltr.replace('_HomRef','')
 
    cutVarLine = '\t'.join([chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fltr]) + '\n'
    vcfLine = '\t'.join([chrom, pos, ID, ref, alt, qual, fltr, INFO, FORMAT, SAMPLE]) + '\n'
@@ -106,7 +106,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, outVariants, tumorNormal):
 
       if fltr.find('LOH_HomRef') != -1:
          alt = '.'
-         fltr.replace('_HomRef','')
+         fltr = fltr.replace('_HomRef','')
 
       vcfLine = '\t'.join([chrom, pos, ID, ref, alt, qual, fltr, INFO, FORMAT, SAMPLE]) + '\n'
       outVcf.write(vcfLine)
@@ -278,7 +278,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
             fQUAL = 0.00
 
 
-         if fQUAL < minCutoff[TYPE.upper()]:
+         if fQUAL < minCutoff[TYPE.upper()] and FILTER.find('LOH_HomRef')==-1: # let LOH_HomRef variants in tumor through
             lastCHROM = '.'
             continue
          try:
@@ -296,21 +296,15 @@ def makeVcf(runPath, outlong, sampleName, refGenome, tumorNormal = False):
          currentAllele = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, fQUAL, FILTER)
          tempVar = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, FILTER)
          lenAlleles = len(alleles)
+
          if tumorNormal:
             currentAllele = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, fQUAL, FILTER, TNFetPval)
             tempVar = (CHROM, POS, REF, ALT, TYPE, DP, VDP, VAF, sUMT, sVMT, sVMF, QUAL, fQUAL, FILTER, TNFetPval)
 
-         if fQUAL < cutoff: ## Write to low-PI file
-
+         if fQUAL < cutoff and FILTER.find('LOH_HomRef') == -1: ## Write to low-PI file, want the LOH_HomRef variants to appear in the cut files
             if tumorNormal:
-
-               if FILTER.find('LOH_HomRef') != -1:
-                  FILTER.replace('_HomRef', '')
-                  ALT = '.'
-
                outLowPi.write('\t'.join([sampleName,CHROM,POS,".",REF,ALT,QUAL,FILTER,TYPE,RepRegion,TNFetPval,DP,sUMT,sVMT,sVMF]))
                outLowPi.write('\n')
-
             else:
                outLowPi.write('\t'.join([sampleName,CHROM,POS,".",REF,ALT,QUAL,FILTER,TYPE,RepRegion,DP,sUMT,sVMT,sVMF]))
                outLowPi.write('\n')
