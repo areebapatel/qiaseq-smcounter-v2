@@ -93,7 +93,7 @@ def main(args):
       os.makedirs('intermediate')
    
    # convert VCF to BED if inputVCF is not 'none'
-   bedTarget = args.bedTarget if args.inputVCF == 'none' else utils.vcf2bed(args.inputVCF)
+   bedTarget = args.bedTarget if args.inputVCF is None else utils.vcf2bed(args.inputVCF)
    
    # gather repetitive regions information
    hpRegion = utils.getHpInfo(bedTarget, args.refGenome, args.isRna, args.hpLen)
