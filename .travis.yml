@@ -24,12 +24,13 @@ before_install:
     https://storage.googleapis.com/qiaseq-dna/data/annotation/duplex.bkg.error.ga.RData \
     https://storage.googleapis.com/qiaseq-dna/data/annotation/SR_LC_SL.full.bed \
     https://storage.googleapis.com/qiaseq-dna/data/annotation/simpleRepeat.full.bed \
-    -P /srv/qgen/data/annotation/
+    -P data/annotation/
 
 script:
   - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
   - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, PR=$PR, BRANCH=$BRANCH"   
   - |
-    sudo docker run --name myqiatest -i -v $(pwd)/data/:/srv/qgen/data/ -v $(pwd)/test_v2/:/home/qiauser/test_v2/ -e BRANCH=$BRANCH \
-    qiaseq/qiaseq-dna:smcounter-v2 bash -c "cd /srv/qgen/code/; git clone -b $BRANCH https://github.com/qiaseq/qiaseq-smcounter-v2.git; \
+    sudo docker run --name myqiatest -i -v $(pwd)/data/genome:/srv/qgen/data/genome -v $(pwd)/data/annotation:/srv/qgen/data/annotation \
+    -v $(pwd)/test_v2/:/home/qiauser/test_v2/ -e BRANCH=$BRANCH qiaseq/qiaseq-dna:smcounter-v2 \
+    bash -c "cd /srv/qgen/code/; git clone -b $BRANCH https://github.com/qiaseq/qiaseq-smcounter-v2.git; \
     cd qiaseq-smcounter-v2/tests/; bash test_smcounterv2.sh /srv/qgen/code/qiaseq-smcounter-v2;"
