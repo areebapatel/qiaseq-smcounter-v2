@@ -161,7 +161,7 @@ def main(args):
    if args.isDuplex:
       pValCmd = ' '.join(['Rscript', pValCode_dup, args.dupBkgErrorDist, './', outfile1, outfile2, str(args.minAltUMI)])
    else:
-      pValCmd = ' '.join(['Rscript', pValCode_sin, args.sinBkgErrorDist, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpu), str(args.minAltUMI), args.inputVCF])
+      pValCmd = ' '.join(['Rscript', pValCode_sin, args.sinBkgErrorDist, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpu), str(args.minAltUMI), str(args.inputVCF).lower()])
 
    if len(locList):
       subprocess.check_call(pValCmd, shell=True)
