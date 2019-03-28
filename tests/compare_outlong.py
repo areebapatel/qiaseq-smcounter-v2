@@ -1,6 +1,9 @@
 import sys
 from collections import defaultdict
 
+def is_close(a, b, rel_tol=1e-02, abs_tol=1e-02):
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 def store_outlong_info(outlong):
     ''' Read the outlong file and store information from the file in a dictionary
     :param str outlong: the outlong file from smcounterv2
@@ -43,15 +46,6 @@ def compare_outlong_info(ORIG_OUT_LONG,NEW_OUT_LONG,verbose):
         if variant not in NEW_OUT_LONG:
             num_variants_diff+=1
             not_in_new.append("Not in NewFile : {var} : {info}".format(var = variant,info = ORIG_OUT_LONG[variant]))
-        else:
-            for info in ORIG_OUT_LONG[variant].keys():
-               if NEW_OUT_LONG[variant][info] != ORIG_OUT_LONG[variant][info]:
-                   flag=1
-                   out_diff_var.add(variant)
-                   metric_diff.append("Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
-            if flag==1:
-                num_out_differences+=1
-
 
     for variant in NEW_OUT_LONG:
         flag = 0
@@ -59,14 +53,34 @@ def compare_outlong_info(ORIG_OUT_LONG,NEW_OUT_LONG,verbose):
             num_variants_diff+=1
             not_in_old.append("Not in OldFile : {var} : {info}".format(var = variant,info = NEW_OUT_LONG[variant]))
         else:
-            if variant not in out_diff_var:
-                for info in NEW_OUT_LONG[variant].keys():
-                    if NEW_OUT_LONG[variant][info] != ORIG_OUT_LONG[variant][info]:
+            for info in NEW_OUT_LONG[variant].keys():
+                a = NEW_OUT_LONG[variant][info]
+                b = ORIG_OUT_LONG[variant][info]
+                try:
+                    a = float(a)
+                    b = float(b)
+                    if not is_close(a, b):
                         flag = 1
-                        metric_diff.append("Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
+                        metric_diff.append(
+                            "Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(
+                                var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
+                except ValueError:
+                    try:
+                        a = int(a)
+                        b = int(a)
+                        if not is_close(a, b):
+                            flag = 1
+                            metric_diff.append("Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(
+                                var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
+                    except ValueError:
+                        if NEW_OUT_LONG[variant][info] != ORIG_OUT_LONG[variant][info]:
+                            flag = 1
+                            metric_diff.append("Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(
+                                var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
 
-                if flag==1:
-                    num_out_differences+=1
+            if flag==1:
+                num_out_differences+=1
+
     if verbose:
         for info in not_in_new:
             print info
