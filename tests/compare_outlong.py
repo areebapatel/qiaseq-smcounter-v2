@@ -1,7 +1,7 @@
 import sys
 from collections import defaultdict
 
-def is_close(a, b, rel_tol=1e-02, abs_tol=1e-02):
+def is_close(a, b, rel_tol=1e-03, abs_tol=1e-03):
     return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 def store_outlong_info(outlong):
@@ -62,7 +62,7 @@ def compare_outlong_info(ORIG_OUT_LONG,NEW_OUT_LONG,verbose):
                     if not is_close(a, b):
                         flag = 1
                         metric_diff.append(
-                            "Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(
+                            "Different information for variant : {var} : {info} OldFile: {val1} NewFile: {val2}".format(
                                 var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
                 except ValueError:
                     try:
@@ -70,12 +70,12 @@ def compare_outlong_info(ORIG_OUT_LONG,NEW_OUT_LONG,verbose):
                         b = int(a)
                         if not is_close(a, b):
                             flag = 1
-                            metric_diff.append("Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(
+                            metric_diff.append("Different information for variant : {var} : {info} OldFile: {val1} NewFile: {val2}".format(
                                 var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
                     except ValueError:
                         if NEW_OUT_LONG[variant][info] != ORIG_OUT_LONG[variant][info]:
                             flag = 1
-                            metric_diff.append("Different information for variant : {var} : {info} OldFile:{val1} NewFile: {val2}".format(
+                            metric_diff.append("Different information for variant : {var} : {info} OldFile: {val1} NewFile: {val2}".format(
                                 var=variant,info=info,val1=ORIG_OUT_LONG[variant][info],val2=NEW_OUT_LONG[variant][info]))
 
             if flag==1:

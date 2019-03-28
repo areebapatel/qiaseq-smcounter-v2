@@ -8,5 +8,5 @@ python $codedir/run.py --runPath /home/qiauser/test_v2/ --bamFile /home/qiauser/
        --refGenome /srv/qgen/data/genome/hg19/ucsc.hg19.fa --repBed /srv/qgen/data/annotation/simpleRepeat.full.bed \
        --srBed /srv/qgen/data/annotation/SR_LC_SL.full.bed
 
-python $codedir/tests/compare_outlong.py /home/qiauser/test_v2/intermediate/NB956-240-3-10_S1.test.VariantList.long.txt \
-       /home/qiauser/test_v2/NB956-240-3-10_S1.highconfidence.VariantList.long.txt True True
+python $codedir/tests/compare_outlong.py /home/qiauser/test_v2/NB956-240-3-10_S1.highconfidence.VariantList.long.txt \
+       /home/qiauser/test_v2/intermediate/NB956-240-3-10_S1.test.VariantList.long.txt True True
