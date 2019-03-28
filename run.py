@@ -59,7 +59,7 @@ def argParseInit():
    parser.add_argument('--inputVCF', type = str, default = None, help = 'optional input VCF file') 
    parser.add_argument('--sinBkgErrorDist', type = str, default = '/srv/qgen/data/annotation/bkg.error.v2.RData', help = 'background error rate distribution for normal DNA-seq runs') 
    parser.add_argument('--isDuplex', action = 'store_true', help = 'duplex-seq DNA varinat calling only; default is normal DNAseq')
-   parser.add_argument('--duplexTag', type = str, default = None, help = 'tag name for duplex UMI')
+   parser.add_argument('--duplexTag', type = str, default = "Du", help = 'tag name for duplex UMI')
    parser.add_argument('--minRpu', type = int, default = 2, help = 'minimum read pairs for UMI to be included; default is 1 for normal DNA-seq (before gradually dropping singletons) and 2 for duplex-seq')
    parser.add_argument('--dupBkgErrorDist', type = str, default ='/srv/qgen/data/annotation/duplex.bkg.error.ga.RData', help = 'background G>A error rate distribution for duplex-seq runs')  
    
@@ -79,7 +79,11 @@ def main(args):
    if type(args) is not argparse.Namespace:
       argsList = []
       for argName, argVal in args.iteritems():
-         argsList.append("--{0}={1}".format(argName, argVal))
+         if argName == "isDuplex":
+            if argVal: # --isDuplex triggered upstream
+               argsList.append("--{0}".format(argName))
+         else:
+            argsList.append("--{0}={1}".format(argName, argVal))
       args = parser.parse_args(argsList)
    
    for argName, argVal in vars(args).iteritems():
@@ -136,13 +140,15 @@ def main(args):
    pool = multiprocessing.Pool(args.nCPU)
    func = functools.partial(vc_wrapper, (args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
    
-   # process exons/intervals from bed file in parallel   
+   # process exons/intervals from bed file in parallel
+   empty = True
    for interval_result in pool.map(func, locList):
       for base_result in interval_result:
          vcOutline,bkgOutline = base_result
          outfile_long.write(vcOutline)
          outfile_bkg.write(bkgOutline)
-         
+         empty = False
+
    # clear finished pool
    pool.close()
    pool.join()
@@ -163,10 +169,9 @@ def main(args):
    else:
       pValCmd = ' '.join(['Rscript', pValCode_sin, args.sinBkgErrorDist, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpu), str(args.minAltUMI), str(args.inputVCF).lower()])
 
-   if len(locList):
+   if not empty:
       subprocess.check_call(pValCmd, shell=True)
       print("completed p-values " + str(datetime.datetime.now()) + "\n")
-
       # make VCFs
       vcf.makeVcf('./', outfile2, args.outPrefix, args.refGenome, args.isDuplex)
    else:
