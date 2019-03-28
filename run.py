@@ -59,7 +59,7 @@ def argParseInit():
    parser.add_argument('--inputVCF', type = str, default = None, help = 'optional input VCF file') 
    parser.add_argument('--sinBkgErrorDist', type = str, default = '/srv/qgen/data/annotation/bkg.error.v2.RData', help = 'background error rate distribution for normal DNA-seq runs') 
    parser.add_argument('--isDuplex', action = 'store_true', help = 'duplex-seq DNA varinat calling only; default is normal DNAseq')
-   parser.add_argument('--duplexTag', type = str, default = "Du", help = 'tag name for duplex UMI')
+   parser.add_argument('--duplexTag', type = str, default = None, help = 'tag name for duplex UMI')
    parser.add_argument('--minRpu', type = int, default = 2, help = 'minimum read pairs for UMI to be included; default is 1 for normal DNA-seq (before gradually dropping singletons) and 2 for duplex-seq')
    parser.add_argument('--dupBkgErrorDist', type = str, default ='/srv/qgen/data/annotation/duplex.bkg.error.ga.RData', help = 'background G>A error rate distribution for duplex-seq runs')  
    
