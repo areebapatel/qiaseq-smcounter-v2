@@ -523,12 +523,12 @@ def dropSingleton(umiDictHq, minRpu, rpu = None, pos = None, ds = None, cvg = No
       pctToDrop = rpu - 2.0
       for bc in umiDictHq:
          readPairsInBc = len(umiDictHq[bc])
-      if readPairsInBc == 1:
-         readid = umiDictHq[bc].keys()[0]
-         if umiDictHq[bc][readid][1] == 'Paired':
-            pairedUmis.add(bc)
-         else:
-            singleUmis.add(bc)
+         if readPairsInBc == 1:
+            readid = umiDictHq[bc].keys()[0]
+            if umiDictHq[bc][readid][1] == 'Paired':
+               pairedUmis.add(bc)
+            else:
+               singleUmis.add(bc)
       # total number of singleton umis
       pairedCnt = len(pairedUmis)
       singleCnt = len(singleUmis)
