@@ -447,7 +447,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
 
          # if last variant is possible multi-allelic, combine and write as one 
          else:            
-            multiAllelicVar(alleles, RepRegion, outVcf, outVariants, isDuplex, tumorNormal, outVariants)
+            multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal, outVariants)
             alleles = [currentAllele]
 
          lastCHROM, lastPOS = CHROM, POS
@@ -457,7 +457,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
    if lenAlleles == 1:
       biAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal, outVariants)
    elif lenAlleles >= 2:
-      multiAllelicVar(alleles, RepRegion, outVcf, outVariants, isDuplex, tumorNormal, outVariants)
+      multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal, outVariants)
    else:
       pass
 
