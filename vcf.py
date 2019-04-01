@@ -149,7 +149,7 @@ def multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal = False, o
          outVariants.write(cutVarLine)
 
    else:
-      VDPs, VAFs, VMTs, UMTs, VMFs, dVMTs, dUMTs, dVMFs, QUALs, fQUALs, TYPEs, REFs, ALTs, DPs, Pvals = [], [], [], [], [], [], [], [], [], [], [], []
+      VDPs, VAFs, VMTs, UMTs, VMFs, dVMTs, dUMTs, dVMFs, QUALs, fQUALs, TYPEs, REFs, ALTs, DPs, Pvals = [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
       for allele in tmpAlleles:
          if isDuplex:
             chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, dumt, dvmt, dvmf, qual, fqual, fltr = allele
