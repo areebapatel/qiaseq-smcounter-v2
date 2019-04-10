@@ -105,7 +105,7 @@ def main(args):
    srRegion = utils.getOtherRepInfo(bedTarget, args.srBed, args.isRna, args.hpLen)
    
    # read in bed file and create a list of positions, annotated with repetitive region
-   locList = utils.getLocList(bedTarget, hpRegion, repRegion, srRegion)
+   locList = utils.getLocList(bedTarget, hpRegion, repRegion, srRegion, args.isDuplex)
    
    # calculate rpu if args.rpu = 0
    if args.rpu == 0.0:

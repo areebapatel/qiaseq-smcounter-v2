@@ -197,7 +197,9 @@ def getOtherRepInfo(bedTarget, srBed, isRna, hpLen):
 #----------------------------------------------------------------------------------------------
 # generate locList, where each member is a target site
 #------------------------------------------------------------------------------------------------
-def getLocList(bedTarget, hpRegion, repRegion, srRegion):
+def getLocList(bedTarget, hpRegion, repRegion, srRegion, isDuplex):
+   if isDuplex:
+      max_bases_for_interval = 45 if isDuplex else 250
    locList = []
    with open(bedTarget,'r') as IN:
       for line in IN:
@@ -239,7 +241,7 @@ def getLocList(bedTarget, hpRegion, repRegion, srRegion):
             repType = 'NA' if len(repTypeSet) == 0 else ';'.join(list(repTypeSet))
             interval.append((chrom, str(pos), repType, hpInfo, srInfo, repInfo))
 
-            if nBases == 250: # restrict interval size to 250 bases
+            if nBases == max_bases_for_interval: # restrict interval size
                locList.append(interval)
                interval = []
                nBases = 0
