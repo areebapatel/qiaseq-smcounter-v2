@@ -570,8 +570,8 @@ def dup_sepUmi(umiPairDict, umiDictHq, umiDictAll, umiToKeep):
    singleUmis = set()
    doubleUmiNoTags = set()
    for key in umiPairDict:
-      tt = 'TT:' + key
-      cc = 'CC:' + key
+      tt = ':'.join(('TT',key))
+      cc = ':'.join(('CC',key))
       umiPairDictVal = umiPairDict[key]
 
       if tt not in umiToKeep and 'TT' in umiPairDictVal:
@@ -967,6 +967,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
    ## duplex-seq run
    if isDuplex:
       # separate single and duplex UMIs
+      umiToKeep = set(umiToKeep)
       singleUmis, doubleUmiNoTags, umiDictHq, umiDictAll = dup_sepUmi(umiPairDict, umiDictHq, umiDictAll, umiToKeep)
       # process single UMIs
       for umi in singleUmis:
