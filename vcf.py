@@ -98,6 +98,8 @@ def biAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal = False, outV
 #--------------------------------------------------------------------------------------
 def multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal = False, outVariants = None):
    ID = '.'
+   FORMAT = 'GT:AD:VF'
+
    if tumorNormal:
       fltr_col = -2
    else:
@@ -134,7 +136,6 @@ def multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal = False, o
                ['TYPE=' + typ, 'RepRegion=' + RepRegion,
                 'DP=' + dp, 'UMT=' + umt, 'VMT=' + vmt, 'VMF=' + vmf])
 
-         FORMAT = 'GT:AD:VF'
          gt = assign_gt(alt, chrom, vmf, fltr)
          ad = assign_ad(umt, vmt)
          SAMPLE = ':'.join([gt, ad, vmf])
@@ -151,17 +152,18 @@ def multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal = False, o
    else:
       VDPs, VAFs, VMTs, UMTs, VMFs, dVMTs, dUMTs, dVMFs, QUALs, fQUALs, TYPEs, REFs, ALTs, DPs, Pvals = [], [], [], [], [], [], [], [], [], [], [], [], [], [], []
       for allele in tmpAlleles:
-         if isDuplex:
+         if isDuplex: # duplex-seq runs
             chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, dumt, dvmt, dvmf, qual, fqual, fltr = allele
             dUMTs.append(dumt)
             dVMTs.append(dvmt)
             dVMFs.append(dvmf)
 
-         if tumorNormal:
-            chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr, fetpval = allele
-            Pvals.append(fetpval)
-         else:
-            chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr = allele
+         else: # regular dna-seq
+            if tumorNormal:
+               chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr, fetpval = allele
+               Pvals.append(fetpval)
+            else:
+               chrom, pos, ref, alt, typ, dp, vdp, vaf, umt, vmt, vmf, qual, fqual, fltr = allele
          
          VDPs.append(vdp)
          VAFs.append(vaf)
