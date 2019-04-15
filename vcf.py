@@ -207,10 +207,10 @@ def multiAllelicVar(alleles, RepRegion, outVcf, isDuplex, tumorNormal = False, o
          alldVMTs = ','.join(dVMTs)
          alldVMFs = ','.join(dVMFs)
          
-         INFO = ';'.join(['TYPE=' + typ, 'RepRegion=' + RepRegion, 'DP=' + dp, 'sUMT=' + sumt, 'sVMT=' + svmt, 'sVMF=' + svmf, 'dUMT=' + dumt, 'dVMT=' + dvmt, 'dVMF=' + dvmf])
-         gt = assign_gt(alt, chrom, svmf, fltr)
-         ad = assign_ad(sumt, svmt)         
-         SAMPLE = ':'.join([gt, ad, svmf])
+         INFO = ';'.join(['TYPE=' + typ, 'RepRegion=' + RepRegion, 'DP=' + dp, 'sUMT=' + umt, 'sVMT=' + vmt, 'sVMF=' + vmf, 'dUMT=' + dumt, 'dVMT=' + dvmt, 'dVMF=' + dvmf])
+         gt = assign_gt(alt, chrom, vmf, fltr)
+         ad = assign_ad(umt, vmt)
+         SAMPLE = ':'.join([gt, ad, vmf])
          vcfLine = '\t'.join([chrom, pos, ID, ref, alt, qual, fltr, INFO, FORMAT, SAMPLE]) + '\n'
          
          for i in rangeDupCutoff:
