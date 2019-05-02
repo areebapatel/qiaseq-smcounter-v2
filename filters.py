@@ -5,8 +5,8 @@ import scipy.stats
 #-------------------------------------------------------------------------------------
 # filter "LM": low coverage
 #-------------------------------------------------------------------------------------
-def lm(fltrs, sMtCons):
-   if sMtCons < 5:
+def lm(fltrs, sUmiCons):
+   if sUmiCons < 5:
       fltrs.add('LM') 
    # output variables
    return(fltrs)
@@ -17,23 +17,23 @@ def lm(fltrs, sMtCons):
 def isHPorLowComp(chrom, pos, length, refb, altb, refseq, repTypeSet, hpInfo, chromLength):
    # ref sequence of [pos-length, pos+length] interval
    pos0 = int(pos) - 1   
-   Lseq = refseq.fetch(reference=chrom,start=max(0,pos0-length),end=pos0).upper()
-   Rseq_ref = refseq.fetch(reference=chrom,start=pos0+len(refb),end=min(pos0+len(refb)+length,chromLength)).upper()  
-   Rseq_alt = refseq.fetch(reference=chrom,start=min(pos0+len(altb),chromLength), end=min(pos0+len(altb)+length,chromLength)).upper()
+   Lseq = refseq.fetch(reference = chrom,start = max(0, pos0 - length),end = pos0).upper()
+   Rseq_ref = refseq.fetch(reference = chrom,start = pos0 + len(refb), end = min(pos0 + len(refb) + length, chromLength)).upper()  
+   Rseq_alt = refseq.fetch(reference = chrom,start = min(pos0 + len(altb), chromLength), end = min(pos0 + len(altb) + length, chromLength)).upper()
    refSeq = Lseq + refb + Rseq_ref
    altSeq = Lseq + altb + Rseq_alt
    # check homopolymer
-   homoA = refSeq.find('A'*length) >= 0 or altSeq.find('A'*length) >= 0
-   homoT = refSeq.find('T'*length) >= 0 or altSeq.find('T'*length) >= 0
-   homoG = refSeq.find('G'*length) >= 0 or altSeq.find('G'*length) >= 0
-   homoC = refSeq.find('C'*length) >= 0 or altSeq.find('C'*length) >= 0
+   homoA = refSeq.find('A' * length) >= 0 or altSeq.find('A' * length) >= 0
+   homoT = refSeq.find('T' * length) >= 0 or altSeq.find('T' * length) >= 0
+   homoG = refSeq.find('G' * length) >= 0 or altSeq.find('G' * length) >= 0
+   homoC = refSeq.find('C' * length) >= 0 or altSeq.find('C' * length) >= 0
    homop = homoA or homoT or homoG or homoC
 
    # check low complexity -- window length is 2 * homopolymer region. If any 2 nucleotide >= 99% 
    len2 = 2 * length
-   LseqLC = refseq.fetch(reference=chrom,start=max(0,pos0-len2),end=pos0).upper()
-   Rseq_refLC = refseq.fetch(reference=chrom,start=pos0+len(refb),end=min(pos0+len(refb)+len2,chromLength)).upper()
-   Rseq_altLC = refseq.fetch(reference=chrom,start=min(pos0+len(altb),chromLength),end=min(pos0+len(altb)+len2,chromLength)).upper()
+   LseqLC = refseq.fetch(reference = chrom, start = max(0, pos0 - len2), end = pos0).upper()
+   Rseq_refLC = refseq.fetch(reference = chrom, start = pos0 + len(refb), end = min(pos0 + len(refb) + len2, chromLength)).upper()
+   Rseq_altLC = refseq.fetch(reference = chrom, start = min(pos0 + len(altb), chromLength), end = min(pos0 + len(altb) + len2, chromLength)).upper()
    # ref seq   
    refSeqLC = LseqLC + refb + Rseq_refLC
    # alt seq
@@ -42,13 +42,13 @@ def isHPorLowComp(chrom, pos, length, refb, altb, refseq, repTypeSet, hpInfo, ch
 
    # Ref seq
    totalLen = len(refSeqLC)
-   for i in range(totalLen-len2):
-      subseq = refSeqLC[i:(i+len2)]
+   for i in range(totalLen - len2):
+      subseq = refSeqLC[i:(i + len2)]
       countA = subseq.count('A')
       countT = subseq.count('T')
       countG = subseq.count('G')
       countC = subseq.count('C')
-      sortedCounts = sorted([countA, countT, countG, countC], reverse=True)
+      sortedCounts = sorted([countA, countT, countG, countC], reverse = True)
       top2Freq = 1.0 * (sortedCounts[0] + sortedCounts[1]) / len2
       if top2Freq >= 0.99:
          lowcomp = True
@@ -57,13 +57,13 @@ def isHPorLowComp(chrom, pos, length, refb, altb, refseq, repTypeSet, hpInfo, ch
    # If ref seq is not LC, check alt seq
    if not lowcomp:
       totalLen = len(altSeqLC)
-      for i in range(totalLen-len2):
-         subseq = altSeqLC[i:(i+len2)]
+      for i in range(totalLen - len2):
+         subseq = altSeqLC[i:(i + len2)]
          countA = subseq.count('A')
          countT = subseq.count('T')
          countG = subseq.count('G')
          countC = subseq.count('C')
-         sortedCounts = sorted([countA, countT, countG, countC], reverse=True)
+         sortedCounts = sorted([countA, countT, countG, countC], reverse = True)
          top2Freq = 1.0 * (sortedCounts[0] + sortedCounts[1]) / len2
          if top2Freq >= 0.99:
             lowcomp = True
@@ -132,7 +132,7 @@ def rep4others(fltrs, repTypeSet, vtype, rpb, vafToVmfRatio, hqUmiEff, RppEffSiz
 #-------------------------------------------------------------------------------------
 # filter "DP" and "SB": discordant read pairs and strand bias 
 #-------------------------------------------------------------------------------------
-def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt, origRef, vaf_tmp):
+def dpSb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt, origRef, vaf_tmp):
    pairs = discordPairCnt[origAlt] + concordPairCnt[origAlt] # total number of paired reads covering the pos
    pDiscord = 1.0 * discordPairCnt[origAlt] / pairs if pairs > 0 else 0.0   
    if pairs >= 1000 and pDiscord >= 0.5:
@@ -149,12 +149,12 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
          else:
             oddsRatio = float("inf")
       else:
-         oddsRatio = float(refR*altF)/(refF*altR)
+         oddsRatio = float(refR * altF) / (refF * altR)
          
       if oddsRatio < 50 and oddsRatio > 0.02:
          return(fltrs)
       
-      pvalue = scipy.stats.fisher_exact([[refR,refF],[altR,altF]])[1]
+      pvalue = scipy.stats.fisher_exact([[refR, refF], [altR, altF]])[1]
       if pvalue < 0.00001:
          fltrs.add('SB')
 
@@ -163,9 +163,9 @@ def dp_sb(fltrs, origAlt, concordPairCnt, discordPairCnt, reverseCnt, forwardCnt
 #-------------------------------------------------------------------------------------
 # filter "PB": primer direction bias
 #-------------------------------------------------------------------------------------
-def pb(fltrs, origAlt, sMtConsByDir, sMtConsByDirByBase):
-   if sMtConsByDir['F'] >= 200 and sMtConsByDir['R'] >= 200:
-      oddsRatioPB = ((sMtConsByDirByBase[origAlt]['F']+0.5)/(sMtConsByDir['F']+0.5)) / ((sMtConsByDirByBase[origAlt]['R']+0.5)/(sMtConsByDir['R']+0.5))
+def pb(fltrs, origAlt, sUmiConsByDir, sUmiConsByDirByBase):
+   if sUmiConsByDir['F'] >= 200 and sUmiConsByDir['R'] >= 200:
+      oddsRatioPB = ((sUmiConsByDirByBase[origAlt]['F'] + 0.5) / (sUmiConsByDir['F'] + 0.5)) / ((sUmiConsByDirByBase[origAlt]['R'] + 0.5) / (sUmiConsByDir['R'] + 0.5))
       oddsRatioPB = round(oddsRatioPB, 2)
       if oddsRatioPB > 10 or oddsRatioPB < 0.1:
          fltrs.add('PB')
@@ -212,7 +212,7 @@ def rbcp(fltrs, endBase, mtSideBcEndPos, origRef, origAlt, vaf_tmp, isRna):
       else:
          oddsRatio = float("inf")   
    else:
-      oddsRatio = float(refLeEnd*altGtEnd)/(refGtEnd*altLeEnd)   
+      oddsRatio = float(refLeEnd * altGtEnd) / (refGtEnd * altLeEnd)   
    if oddsRatio >= 0.05 or (not isRna and vaf_tmp > 60.0):
       return(fltrs)
    
@@ -237,7 +237,7 @@ def rpcp(fltrs, endBase, primerSideBcEndPos, origRef, origAlt, vaf_tmp, isRna):
       else:
          oddsRatio = float("inf")   
    else:
-      oddsRatio = float(refLeEnd*altGtEnd)/(refGtEnd*altLeEnd)   
+      oddsRatio = float(refLeEnd * altGtEnd) / (refGtEnd * altLeEnd)   
    if oddsRatio >= 0.05 or (not isRna and vaf_tmp > 60.0):
       return(fltrs)
    

@@ -5,12 +5,12 @@ from collections import defaultdict
 import pysam
 
 #-------------------------------------------------------------------------------------
-# calculate mean rpb
+# calculate mean rpu
 #-------------------------------------------------------------------------------------
-def getMeanRpb(bamName, umiTag):
+def getMeanRpu(bamName, umiTag):
    samfile = pysam.AlignmentFile(bamName, 'rb')
    allFragSet = set()
-   allBcSet = set()
+   allUmiSet = set()
 
    # fetch all reads
    for read in samfile.fetch():
@@ -18,23 +18,23 @@ def getMeanRpb(bamName, umiTag):
       allFragSet.add(read.query_name)
       
       # barcode sequence          
-      allBcSet.add(read.get_tag(umiTag))
+      allUmiSet.add(read.get_tag(umiTag))
 
    samfile.close()
    
    # total fragment count
    totalFrag = len(allFragSet)
-   # total MT count
-   totalMT = len(allBcSet)
-   # mean rpb
-   meanRpb = float(totalFrag) / totalMT if totalMT > 0 else 1.0   
+   # total UMI count
+   totalUmi = len(allUmiSet)
+   # mean rpu
+   meanRpu = float(totalFrag) / totalUmi if totalUmi > 0 else 1.0   
    
-   return meanRpb
+   return meanRpu
 
 #-------------------------------------------------------------------------------------
 # find homopolymer sequences
 #-------------------------------------------------------------------------------------
-def findhp(bedName, outName, minLength, refg, isRna):
+def findHp(bedName, outName, minLength, refg, isRna):
    # how much to extend the roi to search for homopolymers
    extensionLen = 0 if isRna else 100
    
@@ -49,12 +49,12 @@ def findhp(bedName, outName, minLength, refg, isRna):
       end = int(lineList[2])
 
       # get reference base
-      refseq = pysam.FastaFile(refg)
+      refSeq = pysam.FastaFile(refg)
       
       start_coord = start - 1 - extensionLen
       if start_coord < 0:
          start_coord = start
-      origRef = refseq.fetch(reference=chrom, start=start_coord, end=end + extensionLen)
+      origRef = refSeq.fetch(reference=chrom, start=start_coord, end=end + extensionLen)
       origRef = origRef.upper()
 
       hpL = 0
@@ -70,16 +70,15 @@ def findhp(bedName, outName, minLength, refg, isRna):
                outfile.write(outline)
             hpL = i 
 
-
    outfile.close()
 
 #----------------------------------------------------------------------------------------------
 # convert input VCF to BED file; assume the VCF contains only primitives, and follows the conventional VCF format
 #------------------------------------------------------------------------------------------------
-def vcf2bed(inputVCF):
-   outBed = inputVCF + '.bed'
+def vcf2bed(inputVcf):
+   outBed = inputVcf + '.bed'
    outf = open(outBed, 'w')
-   for line in open(inputVCF, 'r'):
+   for line in open(inputVcf, 'r'):
       if line[0] == '#':
          continue
       lineList = line.strip().split('\t')
@@ -110,7 +109,7 @@ def getHpInfo(bedTarget, refGenome, isRna, hpLen):
    # intersect repeats and target regions
    findHpLen = hpLen if isRna else 6
 
-   findhp(bedTarget, 'hp.roi.bed', findHpLen, refGenome, isRna)
+   findHp(bedTarget, 'hp.roi.bed', findHpLen, refGenome, isRna)
    
    # gather homopolymer region info
    hpRegion = defaultdict(list)
@@ -126,7 +125,7 @@ def getHpInfo(bedTarget, refGenome, isRna, hpLen):
 #------------------------------------------------------------------------------------------------
 def getTrInfo(bedTarget, repBed, isRna, hpLen):
    # intersect repeats and target regions
-   subprocess.check_call('bedtools intersect -a ' + repBed + ' -b ' + bedTarget + ' | bedtools sort -i > rep.roi.bed', shell=True)
+   subprocess.check_call('bedtools intersect -a ' + repBed + ' -b ' + bedTarget + ' | bedtools sort -i > rep.roi.bed', shell = True)
    
    # gather tandem repeat region info
    repRegion = defaultdict(list)
@@ -147,7 +146,7 @@ def getTrInfo(bedTarget, repBed, isRna, hpLen):
             totalLen = int(regionEnd) - int(regionStart)
             if totalLen < hpLen:
                continue
-            repLen = str(totalLen / unitLen_num)
+            repLen = str(totalLen / unitLen_num) if unitLen_num > 0 else '0'
             totalLen = str(totalLen)
          else:
             totalLen = str(unitLen_num * repLen_num)
@@ -186,7 +185,7 @@ def getOtherRepInfo(bedTarget, srBed, isRna, hpLen):
                continue
             try:
                unitLen_num = float(unitLen)
-               repLen = str(totalLen / unitLen_num)
+               repLen = str(totalLen / unitLen_num) if unitLen_num > 0 else '0'
             except ValueError:
                pass
             totalLen = str(totalLen)
@@ -198,7 +197,8 @@ def getOtherRepInfo(bedTarget, srBed, isRna, hpLen):
 #----------------------------------------------------------------------------------------------
 # generate locList, where each member is a target site
 #------------------------------------------------------------------------------------------------
-def getLocList(bedTarget, hpRegion, repRegion, srRegion):
+def getLocList(bedTarget, hpRegion, repRegion, srRegion, isDuplex):
+   max_bases_for_interval = 175 if isDuplex else 250
    locList = []
    with open(bedTarget,'r') as IN:
       for line in IN:
@@ -209,7 +209,7 @@ def getLocList(bedTarget, hpRegion, repRegion, srRegion):
          regionStart = int(lineList[1]) + 1   # target region starts from 1-base after 
          regionEnd = lineList[2]
          interval = [] # information for an interval
-         num_bases = 0 # no. of bases in an interval
+         nBases = 0 # no. of bases in an interval
 
          pos = regionStart
          lineEnd = False
@@ -240,15 +240,15 @@ def getLocList(bedTarget, hpRegion, repRegion, srRegion):
             repType = 'NA' if len(repTypeSet) == 0 else ';'.join(list(repTypeSet))
             interval.append((chrom, str(pos), repType, hpInfo, srInfo, repInfo))
 
-            if num_bases == 250: # restrict interval size to 250 bases
+            if nBases == max_bases_for_interval: # restrict interval size
                locList.append(interval)
                interval = []
-               num_bases = 0
+               nBases = 0
 
             if str(pos) == regionEnd:
                lineEnd = True
             else:
-               num_bases += 1
+               nBases += 1
                pos += 1
 
 
