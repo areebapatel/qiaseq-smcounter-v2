@@ -110,7 +110,7 @@ def main(args):
    # calculate rpu if args.rpu = 0
    if args.rpu == 0.0:
       if args.bamType == 'raw':
-         rpu = utils.getMeanRpb(args.bamFile, args.umiTag) 
+         rpu = utils.getMeanRpu(args.bamFile, args.umiTag)
          print("rpu = " + str(round(rpu,1)) + ", computed by smCounter2")
       else:
          rpu = 5.0
