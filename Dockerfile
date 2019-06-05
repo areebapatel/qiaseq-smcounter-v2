@@ -30,7 +30,7 @@ RUN conda install scipy pysam=0.9.0
     
 ################ R packages ################
 RUN echo "r <- getOption('repos'); r['CRAN'] <- 'http://cran.us.r-project.org'; options(repos = r);" > ~/.Rprofile
-RUN Rscript -e "install.packages(c('plyr','tidyverse','magrittr','data.table'))"
+RUN Rscript -e "install.packages(c('plyr','tidyverse','magrittr','data.table', 'rmutil', 'poibin'))"
 
 ################ Update Environment Variables ################
 ENV PYTHONPATH $PYTHONPATH:/opt/conda/lib/python2.7/site-packages/:/srv/qgen/code/qiaseq-dna/
