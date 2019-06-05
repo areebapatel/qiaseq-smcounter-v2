@@ -2,7 +2,7 @@ import os
 #import sys
 
 # NOTE: temporarily output a VCF for each threshold
-tmp_dup_cutoff = [4.0]
+tmp_dup_cutoff = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
 rangeDupCutoff = range(len(tmp_dup_cutoff))
 
 #-------------------------------------------------------------------------------------
