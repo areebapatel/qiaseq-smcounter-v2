@@ -130,7 +130,7 @@ def main(args):
    header = header_dup if args.isDuplex else header_sin
 
    # set minAltUmi based on run type
-   minAltUmi = 1 if args.isDuplex else args.minAltUmi
+   minAltUmi = 1 if args.isDuplex else args.minAltUMI
    
    #----- loop over locs
    # prepare to save to disk
@@ -142,7 +142,7 @@ def main(args):
    
    print('runtime' + '\t' + 'interval')
    pool = multiprocessing.Pool(args.nCPU)
-   func = functools.partial(vc_wrapper, (args.bamFile, args.minBq, args.minMq, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
+   func = functools.partial(vc_wrapper, (args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
    
    # process exons/intervals from bed file in parallel
    empty = True
