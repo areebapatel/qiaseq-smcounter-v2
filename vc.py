@@ -28,7 +28,7 @@ endBase = 20
 # Number of columns in detailed output; normal DNA-seq
 nColsSin = 38 
 # Number of columns in detailed output; duplex-seq
-nColsDup = 43
+nColsDup = 45
 maxDnaReadDepth = 1000000000
 downsamplePileupStackThr = 10 ** 5
 _base_complement_ = string.maketrans("ACTG", "TGAC")
@@ -864,7 +864,7 @@ def umiEfficiency(hqAgree, hqDisagree, allAgree, allDisagree, origRef, origAlt, 
 #-------------------------------------------------------------------------------------
 # detailed output file
 #-------------------------------------------------------------------------------------
-def outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sUmiConsByDir, sUmiConsByBase, sUmiConsByDirByBase, alleleCnt, primerBiasOR, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize, repTypeSet, bqAlt, hpInfo, srInfo, repInfo, cvg, allFrag, allUmiDict, usedFrag, fltrs, dUmiCons = None, dUmiConsByBase = None, discordDupPairs = None):
+def outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sUmiConsByDir, sUmiConsByBase, sUmiConsByDirByBase, alleleCnt, primerBiasOR, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize, repTypeSet, bqAlt, hpInfo, srInfo, repInfo, cvg, allFrag, allUmiDict, usedFrag, fltrs, dUmiCons = None, dUmiConsByBase = None, discordDupPairs = None, dUmiConsByDirByBase = None):
    # total number of UMIs, fragments, reads, including those dropped from analysis
    allUmi = len(allUmiDict)
    # final FILTER to output
@@ -873,9 +873,6 @@ def outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sU
    fracAlt = str(round((100.0 * alleleCnt[origAlt] / cvg), 3)) if cvg > 0 else '.'  
    # UMI-based variant allele fraction (VMF)
    sVmf = str(round((100.0 * sUmiConsByBase[origAlt] / sUmiCons), 5)) if sUmiCons > 0 else '.'  
-   # UMI-based VMF for each strand
-   vmfForward = str(round((100.0 * sUmiConsByDirByBase[origAlt]['F'] / sUmiConsByDir['F']), 3)) if sUmiConsByDir['F'] > 0 else '.'
-   vmfReverse = str(round((100.0 * sUmiConsByDirByBase[origAlt]['R'] / sUmiConsByDir['R']), 3)) if sUmiConsByDir['R'] > 0 else '.'
    # UMI count for A,C,G,T
    sUmis = [str(sUmiConsByBase['A']), str(sUmiConsByBase['T']), str(sUmiConsByBase['G']), str(sUmiConsByBase['C'])]
    # proportion of <Q20 reads
@@ -902,7 +899,7 @@ def outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sU
 #-------------------------------------------------------------------------------------
 # detailed output file; duplex-seq
 #-------------------------------------------------------------------------------------
-def dup_outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sUmiConsByDir, sUmiConsByBase, sUmiConsByDirByBase, alleleCnt, primerBiasOR, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize, repTypeSet, bqAlt, hpInfo, srInfo, repInfo, cvg, allFrag, allUmiDict, usedFrag, fltrs, dUmiCons = None, dUmiConsByBase = None, discordDupPairs = None):
+def dup_outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sUmiConsByDir, sUmiConsByBase, sUmiConsByDirByBase, alleleCnt, primerBiasOR, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize, repTypeSet, bqAlt, hpInfo, srInfo, repInfo, cvg, allFrag, allUmiDict, usedFrag, fltrs, dUmiCons = None, dUmiConsByBase = None, discordDupPairs = None, dUmiConsByDirByBase = None):
    # total number of UMIs, fragments, reads, including those dropped from analysis
    allUmi = len(allUmiDict)
    # final FILTER to output
@@ -912,9 +909,6 @@ def dup_outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons
    # UMI-based variant allele fraction (VMF)
    sVmf = str(round((100.0 * sUmiConsByBase[origAlt] / sUmiCons), 3)) if sUmiCons > 0 else '.'  
    dVmf = str(round((100.0 * dUmiConsByBase[origAlt] / dUmiCons), 3)) if dUmiCons > 0 else '.'  
-   # UMI-based VMF for each strand
-   vmfForward = str(round((100.0 * sUmiConsByDirByBase[origAlt]['F'] / sUmiConsByDir['F']), 3)) if sUmiConsByDir['F'] > 0 else '.'
-   vmfReverse = str(round((100.0 * sUmiConsByDirByBase[origAlt]['R'] / sUmiConsByDir['R']), 3)) if sUmiConsByDir['R'] > 0 else '.'
    # UMI count for A,C,G,T
    sUmis = [str(sUmiConsByBase['A']), str(sUmiConsByBase['T']), str(sUmiConsByBase['G']), str(sUmiConsByBase['C'])]
    dUmis = [str(dUmiConsByBase['A']), str(dUmiConsByBase['T']), str(dUmiConsByBase['G']), str(dUmiConsByBase['C'])]
@@ -924,17 +918,22 @@ def dup_outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons
    pLowQ = str(round(bqAlt, 3)) if bqAlt >= 0 else 'NA'
    # type of repetitive region
    repTypeFinal = ';'.join(list(repTypeSet)) if len(repTypeSet) >= 1 else 'NA'
-   # UMI counts by primer direction
-   refForPrimer = sUmiConsByDirByBase[origRef]['F']
-   refRevPrimer = sUmiConsByDirByBase[origRef]['R']
-   altForPrimer = sUmiConsByDirByBase[origAlt]['F']
-   altRevPrimer = sUmiConsByDirByBase[origAlt]['R']
-
+   # single UMI counts by primer direction
+   sForUmt = sUmiConsByDirByBase[origRef]['F']
+   sRevUmt = sUmiConsByDirByBase[origRef]['R']
+   sForVmt = sUmiConsByDirByBase[origAlt]['F']
+   sRevVmt = sUmiConsByDirByBase[origAlt]['R']
+   # duplex UMI counts by primer direction
+   dForUmt = dUmiConsByDirByBase[origRef]['F']
+   dRevUmt = dUmiConsByDirByBase[origRef]['R']
+   dForVmt = dUmiConsByDirByBase[origAlt]['F']
+   dRevVmt = dUmiConsByDirByBase[origAlt]['R']
+   
    # round hqUmiEff and allUmiEff in the end
    hqUmiEff = round(hqUmiEff, 3)
    allUmiEff = round(allUmiEff, 3)
 
-   outList = [chrom, pos, ref, alt, vType, str(sUmiCons), str(sUmiConsByBase[origAlt]), sVmf, str(dUmiCons), str(dUmiConsByBase[origAlt]), dVmf, str(cvg), str(alleleCnt[origAlt]), fracAlt, str(refForPrimer), str(refRevPrimer), primerBiasOR, pLowQ, str(hqUmiEff), str(allUmiEff), str(refRppUmiMean), str(altRppUmiMean), str(RppEffSize), repTypeFinal, hpInfo, srInfo, repInfo, str(allFrag), str(allUmi), str(sUmiConsByDir['F']), str(sUmiConsByDir['R']), str(sUmiConsByDirByBase[origAlt]['F']), str(sUmiConsByDirByBase[origAlt]['R']), str(usedFrag)] + sUmis + dUmis + [fltrFinal]
+   outList = [chrom, pos, ref, alt, vType, str(sUmiCons), str(sUmiConsByBase[origAlt]), sVmf, str(dUmiCons), str(dUmiConsByBase[origAlt]), dVmf, str(cvg), str(alleleCnt[origAlt]), fracAlt, str(sForUmt), str(sForVmt), str(sRevUmt), str(sRevVmt), str(dForUmt), str(dForVmt), str(dRevUmt), str(dRevVmt), primerBiasOR, pLowQ, str(hqUmiEff), str(allUmiEff), str(refRppUmiMean), str(altRppUmiMean), str(RppEffSize), repTypeFinal, hpInfo, srInfo, repInfo, str(allFrag), str(allUmi), str(usedFrag)] + sUmis + dUmis + [fltrFinal]
    
    outLineAllele = '\t'.join(outList) + '\n'
    outLine += outLineAllele
@@ -1050,8 +1049,9 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
             # primer bias filter
             fltrs, primerBiasOR = filters.pb(fltrs, origAlt, sUmiConsByDir, sUmiConsByDirByBase)
             if vType == 'SNP':
-               # low base quality filter
-               fltrs = filters.lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt, isRna)
+               # low base quality filter - not for duplex-seq
+               if not isDuplex:
+                  fltrs = filters.lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt, isRna)
                # fixed end (gene specific primers) position filter
                fltrs = filters.primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, tmpVmf, hqUmiEff, vafToVmfRatio, RppEffSize, rpu)
            
@@ -1061,7 +1061,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
 
       firstAlt = False
       # output metrics for each non-reference allele with >= 3 UMIs; If none, output the one with most UMIs
-      outLineLong = outLongFun(outLineLong, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sUmiConsByDir, sUmiConsByBase, sUmiConsByDirByBase, alleleCnt, primerBiasOR, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize, repTypeSet, bqAlt, hpInfo, srInfo, repInfo, cvg, allFrag, allUmiDict, usedFrag, fltrs, dUmiCons, dUmiConsByBase, discordDupPairs)
+      outLineLong = outLongFun(outLineLong, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sUmiConsByDir, sUmiConsByBase, sUmiConsByDirByBase, alleleCnt, primerBiasOR, hqUmiEff, allUmiEff, refRppUmiMean, altRppUmiMean, RppEffSize, repTypeSet, bqAlt, hpInfo, srInfo, repInfo, cvg, allFrag, allUmiDict, usedFrag, fltrs, dUmiCons, dUmiConsByBase, discordDupPairs, dUmiConsByDirByBase)
       
       altCnt += 1
       if altCnt >= maxAltAllele:

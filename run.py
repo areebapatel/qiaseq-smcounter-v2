@@ -15,13 +15,14 @@ from vc import vc_wrapper
 # global constants
 codePath = os.path.dirname(os.path.abspath(__file__))
 pValCode_sin = os.path.join(codePath,'get_pvalue.R')
-pValCode_dup = os.path.join(codePath,'get_lr.duplex.R')
+pValCode_dup = os.path.join(codePath,'get_pvalue_duplex.R')
 locChunkLen = 1000
 seed = 10262016
 nsim = 5000
+minDupUmi = 100
 parser = None
 header_sin = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sForUMT', 'sRevUMT', 'sVMT', 'sForVMT', 'sRevVMT', 'sVMF', 'sForVMF', 'sRevVMF', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'DP', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'FILTER']
-header_dup = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sVMT', 'sVMF', 'dUMT', 'dVMT', 'dVMF', 'DP', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'FR', 'MT', 'sForUMT', 'sRevUMT', 'sForVMT', 'sRevVMT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'dUMT_A', 'dUMT_T', 'dUMT_G', 'dUMT_C', 'FILTER']
+header_dup = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sVMT', 'sVMF', 'dUMT', 'dVMT', 'dVMF', 'DP', 'VDP', 'VAF', 'sForUMT', 'sForVMT', 'sRevUMT', 'sRevVMT', 'dForUMT', 'dForVMT', 'dRevUMT', 'dRevVMT', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'dUMT_A', 'dUMT_T', 'dUMT_G', 'dUMT_C', 'FILTER']
 header_bkg = ['CHROM', 'POS', 'REF', 'A/G', 'G/A', 'C/T', 'T/C', 'A/C', 'C/A', 'A/T', 'T/A', 'C/G', 'G/C', 'G/T', 'T/G', 'negStrand', 'posStrand', 'AllSMT', 'workflow' ]
 
 #----------------------------------------------------------------------------------------------
@@ -36,8 +37,8 @@ def argParseInit():
    parser.add_argument('--bamFile', default = None, help = 'BAM file')
    parser.add_argument('--outPrefix', default = None, help = 'file name prefix')
    parser.add_argument('--nCPU', type = int, default = 1, help = 'number of CPU to use in parallel')
-   parser.add_argument('--minBQ', type = int, default = 25, help = 'minimum base quality allowed for analysis')
-   parser.add_argument('--minMQ', type = int, default = 50, help = "minimum mapping quality allowed for analysis. If the bam is tagged with its mate's mapq, then the minimum of the R1 and R2 mapq will be used for comparison, if not each read is compared independently.")
+   parser.add_argument('--minBq', type = int, default = 25, help = 'minimum base quality allowed for analysis')
+   parser.add_argument('--minMq', type = int, default = 50, help = "minimum mapping quality allowed for analysis. If the bam is tagged with its mate's mapq, then the minimum of the R1 and R2 mapq will be used for comparison, if not each read is compared independently.")
    parser.add_argument('--hpLen', type = int, default = 10, help = 'minimum length for homopolymers')
    parser.add_argument('--mismatchThr', type = float, default = 6.0, help = 'average number of mismatches per 100 bases allowed')
    parser.add_argument('--primerDist', type = int, default = 2, help = 'filter variants that are within X bases to primer')
@@ -49,14 +50,14 @@ def argParseInit():
    parser.add_argument('--primerTag', type = str, default = 'pr', help = 'tag name for Primer')
    parser.add_argument('--mqTag', type = str, default = 'MQ', help = 'tag name for MapQ score of mate')
    parser.add_argument('--tagSeparator', type = str, default = '-', help = 'tag seperator for splitting UMI tag') 
-   parser.add_argument('--minAltUMI', type = int, default = 3, help = 'minimum requirement of ALT UMIs; default is 3')
-   parser.add_argument('--maxAltAllele', type = int, default = 2, help = 'maximum ALT alleles that meet minAltUMI to be reported; default is 2 (tri-allelic variants)')
+   parser.add_argument('--minAltUmi', type = int, default = 3, help = 'minimum requirement of ALT UMIs; default is 3 for normal DNA-seq; 1 for duplex-seq')
+   parser.add_argument('--maxAltAllele', type = int, default = 2, help = 'maximum ALT alleles that meet minAltUmi to be reported; default is 2 (tri-allelic variants)')
    parser.add_argument('--refGenome',type = str,help = 'path to the reference fasta file')
    parser.add_argument('--repBed',type = str,help = 'path to the simpleRepeat bed file')
    parser.add_argument('--srBed',type = str,help = 'path to the full repeat bed file')
    parser.add_argument('--ds', type = int, default = 10000, help = 'down sample if number of UMIs greater than this value (RNA only)')
    parser.add_argument('--bamType', type = str, default = 'raw', help = 'raw (default): raw BAM file with UMIs; consensus: consensused BAM file')
-   parser.add_argument('--inputVCF', type = str, default = None, help = 'optional input VCF file') 
+   parser.add_argument('--inputVcf', type = str, default = None, help = 'optional input VCF file') 
    parser.add_argument('--sinBkgErrorDist', type = str, default = '/srv/qgen/data/annotation/bkg.error.v2.RData', help = 'background error rate distribution for normal DNA-seq runs') 
    parser.add_argument('--isDuplex', action = 'store_true', help = 'duplex-seq DNA varinat calling only; default is normal DNAseq')
    parser.add_argument('--duplexTag', type = str, default = None, help = 'tag name for duplex UMI')
@@ -96,8 +97,8 @@ def main(args):
    if not os.path.exists('intermediate'):
       os.makedirs('intermediate')
    
-   # convert VCF to BED if inputVCF is not 'none'
-   bedTarget = args.bedTarget if args.inputVCF is None else utils.vcf2bed(args.inputVCF)
+   # convert VCF to BED if inputVcf is not 'none'
+   bedTarget = args.bedTarget if args.inputVcf is None else utils.vcf2bed(args.inputVcf)
    
    # gather repetitive regions information
    hpRegion = utils.getHpInfo(bedTarget, args.refGenome, args.isRna, args.hpLen)
@@ -127,6 +128,9 @@ def main(args):
    
    # select header for normal and duplex-seq runs
    header = header_dup if args.isDuplex else header_sin
+
+   # set minAltUmi based on run type
+   minAltUmi = 1 if args.isDuplex else args.minAltUmi
    
    #----- loop over locs
    # prepare to save to disk
@@ -138,7 +142,7 @@ def main(args):
    
    print('runtime' + '\t' + 'interval')
    pool = multiprocessing.Pool(args.nCPU)
-   func = functools.partial(vc_wrapper, (args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, args.minAltUMI, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
+   func = functools.partial(vc_wrapper, (args.bamFile, args.minBq, args.minMq, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
    
    # process exons/intervals from bed file in parallel
    empty = True
@@ -165,22 +169,22 @@ def main(args):
    outfile_lod = 'intermediate/' + args.outPrefix + '.umi_depths.lod.bedgraph'
    
    if args.isDuplex:
-      pValCmd = ' '.join(['Rscript', pValCode_dup, args.dupBkgErrorDist, './', outfile1, outfile2, str(args.minAltUMI)])
+      pValCmd = ' '.join(['Rscript', pValCode_dup, args.dupBkgErrorDist, './', outfile1, outfile2, str(minDupUmi)])
    else:
-      pValCmd = ' '.join(['Rscript', pValCode_sin, args.sinBkgErrorDist, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpu), str(args.minAltUMI), str(args.inputVCF).lower()])
+      pValCmd = ' '.join(['Rscript', pValCode_sin, args.sinBkgErrorDist, './', outfile1, bkgFileName, str(seed), str(nsim), outfile2, outfile_lod, args.outPrefix, str(rpu), str(minAltUmi), str(args.inputVcf).lower()])
 
    if not empty:
-      subprocess.check_call(pValCmd, shell=True)
-      print("completed p-values " + str(datetime.datetime.now()) + "\n")
-      # make VCFs
-      vcf.makeVcf('./', outfile2, args.outPrefix, args.refGenome, args.isDuplex)
+     subprocess.check_call(pValCmd, shell=True)
+     print("completed p-values " + str(datetime.datetime.now()) + "\n")
+     # make VCFs
+     vcf.makeVcf('./', outfile2, args.outPrefix, args.refGenome, args.isDuplex)
    else:
       print("empty BED or BAM, no variants detected " + str(datetime.datetime.now()) + "\n")
    
    # remove intermediate files
-   #os.remove('hp.roi.bed')
-   #os.remove('rep.roi.bed')
-   #os.remove('sr.roi.bed')
+   os.remove('hp.roi.bed')
+   os.remove('rep.roi.bed')
+   os.remove('sr.roi.bed')
    os.remove(outfile1)
 
    # log run completion

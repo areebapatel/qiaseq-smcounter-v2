@@ -1,7 +1,8 @@
 import os
+#import sys
 
 # NOTE: temporarily output a VCF for each threshold
-tmp_dup_cutoff = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
+tmp_dup_cutoff = [4.0]
 rangeDupCutoff = range(len(tmp_dup_cutoff))
 
 #-------------------------------------------------------------------------------------
@@ -261,7 +262,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
          outVcf.append(open(vcfName, 'w'))
       
       # header for .all.txt output
-      headerAll = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sVMT', 'sVMF', 'dUMT', 'dVMT', 'dVMF', 'DP', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'dUMT_A', 'dUMT_T', 'dUMT_G', 'dUMT_C', 'plowDupVMF', 'logLH1', 'logLR', 'FILTER']
+      headerAll = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sVMT', 'sVMF', 'dUMT', 'dVMT', 'dVMF', 'DP', 'VDP', 'VAF', 'sForUMT', 'sForVMT', 'sRevUMT', 'sRevVMT', 'dForUMT', 'dForVMT', 'dRevUMT', 'dRevVMT', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'dUMT_A', 'dUMT_T', 'dUMT_G', 'dUMT_C', 'logPvalSin', 'logPvalDup', 'logPval', 'FILTER']
       
    else:
       outAll = open(sampleName + '.smCounter.all.txt', 'w')
@@ -372,7 +373,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
          cnt += 1
          
          if isDuplex:
-            CHROM, POS, REF, ALT, TYPE, sUMT, sVMT, sVMF, dUMT, dVMT, dVMF, DP, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, dUMT_A, dUMT_T, dUMT_G, dUMT_C, plowDupVMF, logLH1, logLR, FILTER = line.strip().split()
+            CHROM, POS, REF, ALT, TYPE, sUMT, sVMT, sVMF, dUMT, dVMT, dVMF, DP, VDP, VAF, sForUMT, sForVMT, sRevUMT, sRevVMT, dForUMT, dForVMT, dRevUMT, dRevVMT, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, dUMT_A, dUMT_T, dUMT_G, dUMT_C, logPvalSin, logPvalDup, logPval, FILTER = line.strip().split()
          elif tumorNormal:
             CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logpval, FILTER, TNFetPval = line.strip().split('\t')
          else:
@@ -384,8 +385,13 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
          if ALT == 'DEL': 
             continue
          
+         try:
+            fLogPval = float(logPval)
+         except ValueError:
+            fLogPval = 0.00
+            
          if isDuplex:
-            QUAL = logLR if logLR != 'NA' else '0.00'
+            QUAL = str(round(2.0 * fLogPval, 2))
          else:
             QUAL = logpval if logpval != 'NA' else '0.00'
 
@@ -472,3 +478,16 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
       outVariants.close()
       outVcf.close()
       outLowPi.close()
+
+##----------------------------------------------------------------------------------------------
+##pythonism to run from the command line
+##----------------------------------------------------------------------------------------------
+#if __name__ == "__main__":
+#   runPath = sys.argv[1]
+#   outlong = sys.argv[2]
+#   sampleName = sys.argv[3]
+#   refGenome = sys.argv[4]  
+#   isDuplex = True if sys.argv[5] == 'True' else False
+#   tumorNormal = True if sys.argv[6] == 'True' else False
+#
+#   makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal)
