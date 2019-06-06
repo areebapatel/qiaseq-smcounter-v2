@@ -271,7 +271,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
       outLowPi = open(sampleName + '.smCounter.lowQ.txt','w')
       
       # header for .all.txt output
-      headerAll = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sForUMT', 'sRevUMT', 'sVMT', 'sForVMT', 'sRevVMT', 'sVMF', 'sForVMF', 'sRevVMF', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'DP', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'logpval', 'FILTER']
+      headerAll = ['CHROM', 'POS', 'REF', 'ALT', 'TYPE', 'sUMT', 'sForUMT', 'sRevUMT', 'sVMT', 'sForVMT', 'sRevVMT', 'sVMF', 'sForVMF', 'sRevVMF', 'VDP', 'VAF', 'RefForPrimer', 'RefRevPrimer', 'primerOR', 'pLowQ', 'hqUmiEff', 'allUmiEff', 'refMeanRpb', 'altMeanRpb', 'rpbEffectSize', 'repType', 'hpInfo', 'simpleRepeatInfo', 'tandemRepeatInfo', 'DP', 'FR', 'MT', 'UFR', 'sUMT_A', 'sUMT_T', 'sUMT_G', 'sUMT_C', 'logPval', 'FILTER']
       
       # default(6.0) and relaxed(2.5) cutoff
       cutoff = 6.0
@@ -375,9 +375,9 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
          if isDuplex:
             CHROM, POS, REF, ALT, TYPE, sUMT, sVMT, sVMF, dUMT, dVMT, dVMF, DP, VDP, VAF, sForUMT, sForVMT, sRevUMT, sRevVMT, dForUMT, dForVMT, dRevUMT, dRevVMT, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, dUMT_A, dUMT_T, dUMT_G, dUMT_C, logPvalSin, logPvalDup, logPval, FILTER = line.strip().split()
          elif tumorNormal:
-            CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logpval, FILTER, TNFetPval = line.strip().split('\t')
+            CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logPval, FILTER, TNFetPval = line.strip().split('\t')
          else:
-            CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logpval, FILTER = line.strip().split('\t')
+            CHROM, POS, REF, ALT, TYPE, sUMT, sForUMT, sRevUMT, sVMT, sForVMT, sRevVMT, sVMF, sForVMF, sRevVMF, VDP, VAF, RefForPrimer, RefRevPrimer, primerOR, pLowQ, hqUmiEff, allUmiEff, refMeanRpb, altMeanRpb, rpbEffectSize, repType, hpInfo, simpleRepeatInfo, tandemRepeatInfo, DP, FR, MT, UFR, sUMT_A, sUMT_T, sUMT_G, sUMT_C, logPval, FILTER = line.strip().split('\t')
          
          if TYPE == '0':
             continue
@@ -393,7 +393,7 @@ def makeVcf(runPath, outlong, sampleName, refGenome, isDuplex, tumorNormal = Fal
          if isDuplex:
             QUAL = str(round(2.0 * fLogPval, 2))
          else:
-            QUAL = logpval if logpval != 'NA' else '0.00'
+            QUAL = logPval if logPval != 'NA' else '0.00'
 
          try:
             fQUAL = float(QUAL)
