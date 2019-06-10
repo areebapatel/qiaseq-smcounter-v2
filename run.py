@@ -37,8 +37,8 @@ def argParseInit():
    parser.add_argument('--bamFile', default = None, help = 'BAM file')
    parser.add_argument('--outPrefix', default = None, help = 'file name prefix')
    parser.add_argument('--nCPU', type = int, default = 1, help = 'number of CPU to use in parallel')
-   parser.add_argument('--minBQ', type = int, default = 25, help = 'minimum base quality allowed for analysis')
-   parser.add_argument('--minMQ', type = int, default = 50, help = "minimum mapping quality allowed for analysis. If the bam is tagged with its mate's mapq, then the minimum of the R1 and R2 mapq will be used for comparison, if not each read is compared independently.")
+   parser.add_argument('--minBq', type = int, default = 25, help = 'minimum base quality allowed for analysis')
+   parser.add_argument('--minMq', type = int, default = 50, help = "minimum mapping quality allowed for analysis. If the bam is tagged with its mate's mapq, then the minimum of the R1 and R2 mapq will be used for comparison, if not each read is compared independently.")
    parser.add_argument('--hpLen', type = int, default = 10, help = 'minimum length for homopolymers')
    parser.add_argument('--mismatchThr', type = float, default = 6.0, help = 'average number of mismatches per 100 bases allowed')
    parser.add_argument('--primerDist', type = int, default = 2, help = 'filter variants that are within X bases to primer')
@@ -50,7 +50,7 @@ def argParseInit():
    parser.add_argument('--primerTag', type = str, default = 'pr', help = 'tag name for Primer')
    parser.add_argument('--mqTag', type = str, default = 'MQ', help = 'tag name for MapQ score of mate')
    parser.add_argument('--tagSeparator', type = str, default = '-', help = 'tag seperator for splitting UMI tag') 
-   parser.add_argument('--minAltUMI', type = int, default = 3, help = 'minimum requirement of ALT UMIs; default is 3 for normal DNA-seq; 1 for duplex-seq')
+   parser.add_argument('--minAltUmi', type = int, default = 3, help = 'minimum requirement of ALT UMIs; default is 3 for normal DNA-seq; 1 for duplex-seq')
    parser.add_argument('--maxAltAllele', type = int, default = 2, help = 'maximum ALT alleles that meet minAltUmi to be reported; default is 2 (tri-allelic variants)')
    parser.add_argument('--refGenome',type = str,help = 'path to the reference fasta file')
    parser.add_argument('--repBed',type = str,help = 'path to the simpleRepeat bed file')
@@ -130,7 +130,7 @@ def main(args):
    header = header_dup if args.isDuplex else header_sin
 
    # set minAltUmi based on run type
-   minAltUmi = 1 if args.isDuplex else args.minAltUMI
+   minAltUmi = 1 if args.isDuplex else args.minAltUmi
    
    #----- loop over locs
    # prepare to save to disk
@@ -142,7 +142,7 @@ def main(args):
    
    print('runtime' + '\t' + 'interval')
    pool = multiprocessing.Pool(args.nCPU)
-   func = functools.partial(vc_wrapper, (args.bamFile, args.minBQ, args.minMQ, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
+   func = functools.partial(vc_wrapper, (args.bamFile, args.minBq, args.minMq, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
    
    # process exons/intervals from bed file in parallel
    empty = True
