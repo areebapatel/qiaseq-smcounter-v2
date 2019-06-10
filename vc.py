@@ -885,7 +885,9 @@ def outLong(outLine, chrom, pos, ref, alt, vType, origRef, origAlt, sUmiCons, sU
    refRevPrimer = sUmiConsByDirByBase[origRef]['R']
    altForPrimer = sUmiConsByDirByBase[origAlt]['F']
    altRevPrimer = sUmiConsByDirByBase[origAlt]['R']
-
+   # UMI-based VMF for each strand
+   vmfForward = str(round((100.0 * sUmiConsByDirByBase[origAlt]['F'] / sUmiConsByDir['F']), 3)) if sUmiConsByDir['F'] > 0 else '.'
+   vmfReverse = str(round((100.0 * sUmiConsByDirByBase[origAlt]['R'] / sUmiConsByDir['R']), 3)) if sUmiConsByDir['R'] > 0 else '.'
    # round hqUmiEff and allUmiEff in the end
    hqUmiEff = round(hqUmiEff, 3)
    allUmiEff = round(allUmiEff, 3)
