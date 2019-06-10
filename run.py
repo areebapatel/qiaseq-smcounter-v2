@@ -45,7 +45,7 @@ def argParseInit():
    parser.add_argument('--consThr', type = float, default = 0.8, help = 'threshold on read proportion to determine UMI level consensus')
    parser.add_argument('--rpu', type = float, default = 0.0, help = 'mean read pairs per UMI; default at 0 and will be calculated')
    parser.add_argument('--isRna', action = 'store_true', help = 'RNAseq varinat calling only; default is DNAseq')
-   parser.add_argument('--primerSide', type = int, default = 1, help = 'read end that includes the primer; default is 1')
+   parser.add_argument('--primerSide', type = str, default = 'R1', help = 'read end that includes the primer; default is R1')
    parser.add_argument('--umiTag', type = str, default = 'Mi', help = 'tag name for normal UMI')
    parser.add_argument('--primerTag', type = str, default = 'pr', help = 'tag name for Primer')
    parser.add_argument('--mqTag', type = str, default = 'MQ', help = 'tag name for MapQ score of mate')
@@ -119,10 +119,7 @@ def main(args):
    else:
       rpu = args.rpu
       print("rpu = " + str(round(rpu,1)) + ", given by user")
-      
-   # set primer side
-   primerSide = 'R1' if args.primerSide == 1 else 'R2'
-   
+        
    # set type of input BAM file
    bamType = 'raw' if args.bamType == 'raw' else 'consensus'
    
@@ -142,7 +139,7 @@ def main(args):
    
    print('runtime' + '\t' + 'interval')
    pool = multiprocessing.Pool(args.nCPU)
-   func = functools.partial(vc_wrapper, (args.bamFile, args.minBq, args.minMq, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
+   func = functools.partial(vc_wrapper, (args.bamFile, args.minBq, args.minMq, args.hpLen, args.mismatchThr, args.primerDist, args.consThr, rpu, args.primerSide, args.refGenome, minAltUmi, args.maxAltAllele, args.isRna, args.ds, bamType, args.umiTag, args.primerTag, args.mqTag, args.tagSeparator, args.isDuplex, args.duplexTag, args.minRpu))
    
    # process exons/intervals from bed file in parallel
    empty = True

@@ -282,7 +282,7 @@ def isHPCovered(astart, aend, hpInfo):
 #-------------------------------------------------------------------------------------
 # update read level metrics
 #-------------------------------------------------------------------------------------  
-def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSp, umiSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg):
+def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSp, umiSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, d2UmiDict, d2PrimerDict, cvg):
    # update metrics for all types of positions
    alleleCnt[base] += 1
    strand = 'Reverse' if pileupRead.alignment.is_reverse else 'Forward' # +/- strand and update read depth by strand
@@ -296,30 +296,32 @@ def updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSp, umiSide,
       # count the number of low quality reads (less than Q20 by default) for each base
       if bq < lowBqThr:
          lowQReads[base] += 1
-      if pairOrder == umiSide:
+      if pairOrder == umiSide:  # default R2
          # distance to the random (umi) end
          if pileupRead.alignment.is_reverse:
-            distToUmiEnd = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSp)
+            distToUmi = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSp)
          else:
-            distToUmiEnd = pileupRead.query_position - leftSp
+            distToUmi = pileupRead.query_position - leftSp
          if incCond:
-            umiSideUmiEndPos[base].append(distToUmiEnd)
-      if pairOrder == primerSide:
-         # distance to the barcode and/or primer end on primer side read. Different cases for forward and reverse strand
+            d2UmiDict[pairOrder][base].append(distToUmi)
+      if pairOrder == primerSide:  # default R1
+         # distance to the random (umi) end
          if pileupRead.alignment.is_reverse:
-            distToUmiEnd = pileupRead.query_position - leftSp
-            distToPrimerEnd = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSp)
+            distToUmi = pileupRead.query_position - leftSp
          else:
-            distToUmiEnd = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSp)
-            distToPrimerEnd = pileupRead.query_position - leftSp
+            distToUmi = pileupRead.alignment.query_alignment_length - (pileupRead.query_position - leftSp)
+         
+         # distance to primer = aligned fragment length - dist to UMI (only calculated for R1, which carries the primer)
+         distToPrimer = pileupRead.alignment.query_alignment_length - distToUmi
+
          if incCond:
-            primerSideUmiEndPos[base].append(distToUmiEnd)
-            primerSidePrimerEndPos[base].append(distToPrimerEnd)
+            d2UmiDict[pairOrder][base].append(distToUmi)
+            d2PrimerDict[base].append(distToPrimer)
    
    # coverage -- read, not fragment
    cvg += 1
    
-   return(alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg)
+   return(alleleCnt, forwardCnt, reverseCnt, lowQReads, d2UmiDict, d2PrimerDict, cvg)
 
 #-------------------------------------------------------------------------------------
 # Group reads by UMI and update some metrics 
@@ -436,9 +438,8 @@ def pileupAndGroupByUmi(bamName, bamType, chrom, pos, repType, hpInfo, minBq, mi
    reverseCnt = defaultdict(int)
    concordPairCnt = defaultdict(int)
    discordPairCnt = defaultdict(int)
-   umiSideUmiEndPos = defaultdict(list)
-   primerSideUmiEndPos = defaultdict(list)
-   primerSidePrimerEndPos = defaultdict(list)
+   d2UmiDict = defaultdict(lambda:defaultdict(list))
+   d2PrimerDict = defaultdict(list)
    allUmiDict = defaultdict(set)
    umiDictHqBase = defaultdict(lambda:defaultdict(int))
    umiDictAll = defaultdict(lambda:defaultdict(int))
@@ -490,13 +491,13 @@ def pileupAndGroupByUmi(bamName, bamType, chrom, pos, repType, hpInfo, minBq, mi
          hqCache[key] = (leftSp, incCondTemp)
 
       # update read-level metrics
-      alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg = updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSp, umiSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg)
+      alleleCnt, forwardCnt, reverseCnt, lowQReads, d2UmiDict, d2PrimerDict, cvg = updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSp, umiSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, d2UmiDict, d2PrimerDict, cvg)
 
       # group reads by umis
       allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, umiPairDict = groupByUmiFun(readid, umi, base, pairOrder, usedFrag, allFrag, incCond, hpCovered, allUmiDict, umiDictHq, umiDictHqBase, umiDictAll, concordPairCnt, discordPairCnt, umiPairDict, umiNoDupTag, dupTag)
       
    # output variables
-   return(alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg, allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache, umiPairDict)
+   return(alleleCnt, forwardCnt, reverseCnt, lowQReads, d2UmiDict, d2PrimerDict, cvg, allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache, umiPairDict)
 
 #-------------------------------------------------------------------------------------
 # gradually drop singleton UMIs, depending on rpu and input mode
@@ -951,7 +952,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
    origRef = getRef(refseq, chrom, pos)
    
    # pile up and group reads by UMIs
-   alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg, allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache, umiPairDict = pileupAndGroupByUmi(bamName, bamType, chrom, pos, repType, hpInfo, minBq, minMq, hpLen, mismatchThr, primerDist, consThr, rpu, primerSide, refseq, minAltUmi, maxAltAllele, isRna, read_pileup, hqCache, infoCache, umiTag, primerTag, mqTag, tagSeparator, umiPairDict, duplexTag, getUmiFun, groupByUmiFun)
+   alleleCnt, forwardCnt, reverseCnt, lowQReads, d2UmiDict, d2PrimerDict, cvg, allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache, umiPairDict = pileupAndGroupByUmi(bamName, bamType, chrom, pos, repType, hpInfo, minBq, minMq, hpLen, mismatchThr, primerDist, consThr, rpu, primerSide, refseq, minAltUmi, maxAltAllele, isRna, read_pileup, hqCache, infoCache, umiTag, primerTag, mqTag, tagSeparator, umiPairDict, duplexTag, getUmiFun, groupByUmiFun)
    
    # gradually drop singleton UMIs; keep all UMIs for consensused BAM; drop singletons for duplex-seq runs
    umiToKeep = dropSingletonFun(umiDictHq, minRpu, rpu, pos, ds, cvg, allUmiDict, isRna, bamType)  
@@ -1031,8 +1032,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
          # SNP-only common filters
          if vType == 'SNP':
             # random (umi) end position filters
-            fltrs = filters.rbcp(fltrs, endBase, umiSideUmiEndPos, origRef, origAlt, tmpVaf, isRna)
-            fltrs = filters.rpcp(fltrs, endBase, primerSideUmiEndPos, origRef, origAlt, tmpVaf, isRna)
+            fltrs = filters.umicp(fltrs, endBase, d2UmiDict, origRef, origAlt, tmpVaf, isRna)
             # proportion of low base quality reads
             if origAlt in alleleCnt and origAlt in lowQReads and alleleCnt[origAlt] > 0:
                bqAlt = 1.0 * lowQReads[origAlt] / alleleCnt[origAlt]
@@ -1053,11 +1053,11 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
                if not isDuplex:
                   fltrs = filters.lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt, isRna)
                # fixed end (gene specific primers) position filter
-               fltrs = filters.primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, tmpVmf, hqUmiEff, vafToVmfRatio, RppEffSize, rpu)
+               fltrs = filters.primercp(fltrs, primerDist, d2PrimerDict, origRef, origAlt, tmpVmf, hqUmiEff, vafToVmfRatio, RppEffSize, rpu)
            
          ### consensus BAM only filters; use more strict repetitive and primerOR filters; Discard LowQ filter because the base qualities have different meanings
          else:
-            fltrs = filters.strict(fltrs, repTypeSet, vType, tmpVmf, primerDist, primerSidePrimerEndPos, origRef, origAlt)
+            fltrs = filters.strict(fltrs, repTypeSet, vType, tmpVmf, primerDist, d2PrimerDict, origRef, origAlt)
 
       firstAlt = False
       # output metrics for each non-reference allele with >= 3 UMIs; If none, output the one with most UMIs

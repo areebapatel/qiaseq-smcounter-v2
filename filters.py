@@ -198,64 +198,68 @@ def lowq(fltrs, lowQReads, alleleCnt, origAlt, vafToVmfRatio, bqAlt, isRna):
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
-# filter "RBCP": variant too close to the random (UMI) end on R1
+# filter "UmiCP": variant too close to the random (UMI) end on R1 or R2
 #-------------------------------------------------------------------------------------
-def rbcp(fltrs, endBase, mtSideBcEndPos, origRef, origAlt, vaf_tmp, isRna):
-   refLeEnd = sum(d <= endBase for d in mtSideBcEndPos[origRef])  # number of REF R2 reads with distance <= endBase
-   refGtEnd = len(mtSideBcEndPos[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
-   altLeEnd = sum(d <= endBase for d in mtSideBcEndPos[origAlt])  # number of ALT R2 reads with distance <= endBase
-   altGtEnd = len(mtSideBcEndPos[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
+def umicp(fltrs, endBase, d2UmiDict, origRef, origAlt, vaf_tmp, isRna):
+   # R1 
+   r1 = d2UmiDict['R1']
+   refLeEnd = sum(d <= endBase for d in r1[origRef])  
+   refGtEnd = len(r1[origRef]) - refLeEnd         
+   altLeEnd = sum(d <= endBase for d in r1[origAlt])  
+   altGtEnd = len(r1[origAlt]) - altLeEnd         
    
    if refGtEnd == 0 or altLeEnd == 0:
       if refLeEnd == 0 or altGtEnd == 0:
-         return(fltrs)
+         oddsRatio = 1.0
       else:
          oddsRatio = float("inf")   
    else:
       oddsRatio = float(refLeEnd * altGtEnd) / (refGtEnd * altLeEnd)   
+   
    if oddsRatio >= 0.05 or (not isRna and vaf_tmp > 60.0):
-      return(fltrs)
-   
-   pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]   
-   if pvalue < 0.001:
-      fltrs.add('RBCP')
-   
-   return(fltrs)
-
-#-------------------------------------------------------------------------------------
-# filter "RPCP": variant too close to the random (UMI) end on R2
-#-------------------------------------------------------------------------------------
-def rpcp(fltrs, endBase, primerSideBcEndPos, origRef, origAlt, vaf_tmp, isRna):
-   refLeEnd = sum(d <= endBase for d in primerSideBcEndPos[origRef])  # number of REF R2 reads with distance <= endBase
-   refGtEnd = len(primerSideBcEndPos[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
-   altLeEnd = sum(d <= endBase for d in primerSideBcEndPos[origAlt])  # number of ALT R2 reads with distance <= endBase
-   altGtEnd = len(primerSideBcEndPos[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
+      umiCP_R1 = False
+   else:
+      pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]   
+      if pvalue < 0.001:
+         umiCP_R1 = True
+  
+   # R2
+   r2 = d2UmiDict['R2']
+   refLeEnd = sum(d <= endBase for d in r2[origRef])  
+   refGtEnd = len(r2[origRef]) - refLeEnd         
+   altLeEnd = sum(d <= endBase for d in r2[origAlt])  
+   altGtEnd = len(r2[origAlt]) - altLeEnd   
    
    if refGtEnd == 0 or altLeEnd == 0:
       if refLeEnd == 0 or altGtEnd == 0:
-         return(fltrs)
+         oddsRatio = 1.0
       else:
          oddsRatio = float("inf")   
    else:
       oddsRatio = float(refLeEnd * altGtEnd) / (refGtEnd * altLeEnd)   
+      
    if oddsRatio >= 0.05 or (not isRna and vaf_tmp > 60.0):
-      return(fltrs)
+      umiCP_R2 = False
+   else:
+      pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]   
+      if pvalue < 0.001:
+         umiCP_R2 = True
    
-   pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]
-   if pvalue < 0.001:
-      fltrs.add('RPCP')
-
+   # filter variant if it's clustered on R1 or R2's UMI end
+   if umiCP_R1 or umiCP_R2:
+      fltrs.add('UmiCP')
+   
    return(fltrs)
 
 #-------------------------------------------------------------------------------------
 # filter "PrimerCP": variant too close to the fixed (gene specific primer) end 
 #-------------------------------------------------------------------------------------
-def primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, vmf_tmp, hqUmiEff, vafToVmfRatio, RppEffSize, rpb):
+def primercp(fltrs, primerDist, d2PrimerDict, origRef, origAlt, vmf_tmp, hqUmiEff, vafToVmfRatio, RppEffSize, rpb):
    # fixed end position filter
-   refLeEnd = sum(d <= primerDist for d in primerSidePrimerEndPos[origRef])  # number of REF R2 reads with distance <= endBase
-   refGtEnd = len(primerSidePrimerEndPos[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
-   altLeEnd = sum(d <= primerDist for d in primerSidePrimerEndPos[origAlt])  # number of ALT R2 reads with distance <= endBase
-   altGtEnd = len(primerSidePrimerEndPos[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
+   refLeEnd = sum(d <= primerDist for d in d2PrimerDict[origRef])  # number of REF R2 reads with distance <= endBase
+   refGtEnd = len(d2PrimerDict[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
+   altLeEnd = sum(d <= primerDist for d in d2PrimerDict[origAlt])  # number of ALT R2 reads with distance <= endBase
+   altGtEnd = len(d2PrimerDict[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
    fisher = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])
    oddsRatio = fisher[0]
    pvalue = fisher[1]
@@ -276,7 +280,7 @@ def primercp(fltrs, primerDist, primerSidePrimerEndPos, origRef, origAlt, vmf_tm
 #-------------------------------------------------------------------------------------
 # strict filters used in smCounter-v1 and earlier versions of smCounter2; for consensused BAM only
 #-------------------------------------------------------------------------------------
-def strict(fltrs, repTypeSet, vtype, vmf_tmp, primerDist, primerSidePrimerEndPos, origRef, origAlt):
+def strict(fltrs, repTypeSet, vtype, vmf_tmp, primerDist, d2PrimerDict, origRef, origAlt):
    # homopolymer
    if 'HP' in repTypeSet and vmf_tmp < 99:
       fltrs.add('HP')
@@ -295,10 +299,10 @@ def strict(fltrs, repTypeSet, vtype, vmf_tmp, primerDist, primerSidePrimerEndPos
 
    # PrimerCP (SNP only)
    if vtype == 'SNP':
-      refLeEnd = sum(d <= primerDist for d in primerSidePrimerEndPos[origRef])  # number of REF R2 reads with distance <= endBase
-      refGtEnd = len(primerSidePrimerEndPos[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
-      altLeEnd = sum(d <= primerDist for d in primerSidePrimerEndPos[origAlt])  # number of ALT R2 reads with distance <= endBase
-      altGtEnd = len(primerSidePrimerEndPos[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
+      refLeEnd = sum(d <= primerDist for d in d2PrimerDict[origRef])  # number of REF R2 reads with distance <= endBase
+      refGtEnd = len(d2PrimerDict[origRef]) - refLeEnd         # number of REF R2 reads with distance > endBase
+      altLeEnd = sum(d <= primerDist for d in d2PrimerDict[origAlt])  # number of ALT R2 reads with distance <= endBase
+      altGtEnd = len(d2PrimerDict[origAlt]) - altLeEnd         # number of ALT R2 reads with distance > endBase
       fisher = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])
       oddsRatio = fisher[0]
       pvalue = fisher[1]   
