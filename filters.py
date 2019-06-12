@@ -222,6 +222,9 @@ def umicp(fltrs, endBase, d2UmiDict, origRef, origAlt, vaf_tmp, isRna):
       pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]   
       if pvalue < 0.001:
          umiCP_R1 = True
+      else:
+         umiCP_R1 = False
+
   
    # R2
    r2 = d2UmiDict['R2']
@@ -244,6 +247,8 @@ def umicp(fltrs, endBase, d2UmiDict, origRef, origAlt, vaf_tmp, isRna):
       pvalue = scipy.stats.fisher_exact([[refLeEnd, refGtEnd], [altLeEnd, altGtEnd]])[1]   
       if pvalue < 0.001:
          umiCP_R2 = True
+      else:
+         umiCP_R2 = False
    
    # filter variant if it's clustered on R1 or R2's UMI end
    if umiCP_R1 or umiCP_R2:
