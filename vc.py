@@ -975,13 +975,16 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
       for umi in singleUmis:
          # generate consensus
          cons = consensus(umiDictHqBase, umiDictAll, umi, consThr, bamType)
-         
          # update umi-level metrics
          hqAgree, hqDisagree, allAgree, allDisagree, sUmiCons, sUmiConsByBase, sUmiConsByDir, sUmiConsByDirByBase, rpuCnt, sSubTypeCnt, sUmiSnp, sStrands = updateUmiMetrics(umi, umiDictHqBase, cons, hqAgree, hqDisagree, umiDictAll, allAgree, allDisagree, origRef, sUmiCons, sUmiConsByBase, sUmiConsByDir, sUmiConsByDirByBase, rpuCnt, sSubTypeCnt, sUmiSnp, sStrands, tagSeparator)    
+
       # process duplex UMIs
       for umiNoDupTag in doubleUmiNoTags:                  
          cons, hqAgree, hqDisagree, allAgree, allDisagree, dUmiCons, dUmiConsByBase, dUmiConsByDir, dUmiConsByDirByBase, rpuCnt, dSubTypeCnt, dUmiSnp, dStrands, discordDupPairs = dup_consAndUpdateUmiMetrics(umiNoDupTag, umiDictHqBase, umiDictAll, consThr, hqAgree, hqDisagree, allAgree, allDisagree, origRef, dUmiCons, dUmiConsByBase, dUmiConsByDir, dUmiConsByDirByBase, rpuCnt, dSubTypeCnt, dUmiSnp, dStrands, tagSeparator, discordDupPairs)  
-   
+
+      # rank alleles by single + duplex UMIs
+      umiByBase = { k: sUmiConsByBase.get(k, 0) + dUmiConsByBase.get(k, 0) for k in set(sUmiConsByBase) | set(dUmiConsByBase) }
+
    ## normal DNA-seq run
    else:
       for umi in umiToKeep:
@@ -989,11 +992,14 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
          cons = consensus(umiDictHqBase, umiDictAll, umi, consThr, bamType)
          # update umi-level metrics
          hqAgree, hqDisagree, allAgree, allDisagree, sUmiCons, sUmiConsByBase, sUmiConsByDir, sUmiConsByDirByBase, rpuCnt, sSubTypeCnt, sUmiSnp, sStrands = updateUmiMetrics(umi, umiDictHqBase, cons, hqAgree, hqDisagree, umiDictAll, allAgree, allDisagree, origRef, sUmiCons, sUmiConsByBase, sUmiConsByDir, sUmiConsByDirByBase, rpuCnt, sSubTypeCnt, sUmiSnp, sStrands, tagSeparator)
+      # rank alleles by single UMIs
+      umiByBase = sUmiConsByBase
 
    # output the background error profile
    outLineBkg = outBkgFun(chrom, pos, origRef, sSubTypeCnt, sStrands, sUmiSnp, dSubTypeCnt, dStrands, dUmiSnp)
 
-   alleleList = sorted(sUmiConsByBase.items(), key = operator.itemgetter(1), reverse = True)
+   # rank alleles by single UMI for normal DNA-seq, and by single + duplex UMI for duplex-seq runs
+   alleleList = sorted(umiByBase.items(), key = operator.itemgetter(1), reverse = True)
    firstAlt = True
    altCnt = 0
    repTypeSet0 = set() if repType == 'NA' else set(repType.strip().split(';'))
@@ -1003,7 +1009,7 @@ def vc(bamName, chrom, pos, repType, hpInfo, srInfo, repInfo, minBq, minMq, hpLe
       origAlt = alleleList[alleleInd][0]
       maxVMT = alleleList[alleleInd][1]
 
-      # if a non-reference allele has >= 3 UMIs, consider it as a candidate variant 
+      # if a non-reference allele has >= minAltUmi UMIs (default: 3 for normal DNA-seq and 1 for duplex-seq, single + duplex), consider it as a candidate variant 
       if origAlt == origRef:
          continue
       if maxVMT < minAltUmi and not firstAlt:
