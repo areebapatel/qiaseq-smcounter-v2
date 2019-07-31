@@ -31,7 +31,7 @@ nColsSin = 38
 nColsDup = 43
 maxDnaReadDepth = 1000000000
 downsamplePileupStackThr = 10 ** 5
-_base_complement_ = str.maketrans("ACTG", "TGAC")
+_base_complement_ = string.maketrans("ACTG", "TGAC")
 
 #-------------------------------------------------------------------------------------
 # create variables
