@@ -1081,7 +1081,7 @@ def vc_wrapper(general_args, interval):
       infoCache = {}
       bamName, minBq, minMq, hpLen, mismatchThr, primerDist, consThr, rpu, primerSide, refg, minAltUmi, maxAltAllele, isRna, ds, bamType, umiTag, primerTag, mqTag, tagSeparator, isDuplex, duplexTag, minRpu = general_args
 
-      
+      pos= interval[0][0]
       chrom = interval[0][0]
       intervalStartPos = interval[0][1]
       intervalEndPos = interval[-1][1]
@@ -1117,7 +1117,7 @@ def vc_wrapper(general_args, interval):
          chromLengths[refseq.references[idx]] = refseq.lengths[idx]
          
       i = 0
-      for read_pileup in pileup(bamName, chrom, pos, intervalStartPos, intervalEndPos):
+      for read_pileup in pileup(bamName, chrom, intervalStartPos, intervalEndPos):
          site = interval[i]
          i += 1
          chrom, pos, repType, hpInfo, srInfo, repInfo = site
