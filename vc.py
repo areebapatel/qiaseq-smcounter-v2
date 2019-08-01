@@ -409,7 +409,7 @@ def dup_groupByUmi(readid, umi, base, pairOrder, usedFrag, allFrag, incCond, hpC
 def pileup(bamName, chrom, start, end):
    samfile = pysam.AlignmentFile(bamName,"rb")
    current_pos = int(start)
-   for p in samfile.pileup(region = chrom + ":" + start + ":" + end, truncate=True, max_depth = maxDnaReadDepth, stepper = "nofilter"):
+   for p in samfile.pileup(region = chrom + ":" + start + "-" + end, truncate=True, max_depth = maxDnaReadDepth, stepper = "nofilter"):
       ref_pos = p.pos+1
       while True:
          if ref_pos < current_pos:
