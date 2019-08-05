@@ -138,14 +138,14 @@ def dropRead(pileupRead, pos, cigar):
 #-------------------------------------------------------------------------------------
 # get UMI sequence from read
 #-------------------------------------------------------------------------------------   
-def getUmi(pileupRead, bamType, readid, umiTag, duplexTag = None):
+def getUmi(pileupRead, readid, duplexTag = None):
    # UMI sequence not including duplex tags
-   umiNoDupTag = pileupRead.alignment.get_tag(umiTag)
+  
    # if the input BAM is consensused, use read ID as umi barcode
-   umi = umiNoDupTag if bamType == 'raw' else readid
+   umi = readid
    dupTag = None
 
-   return(umi, umiNoDupTag, dupTag)
+   return(umi, dupTag)
 
 #-------------------------------------------------------------------------------------
 # get UMI sequence from read; duplex-seq
@@ -664,7 +664,7 @@ def consensus(umiDictHqBase, umiDictAll, umi, consThr, bamType):
 def updateUmiMetrics(umi, umiDictHqBase, cons, hqAgree, hqDisagree, umiDictAll, allAgree, allDisagree, origRef, sUmiCons, sUmiConsByBase, sUmiConsByDir, sUmiConsByDirByBase, rpuCnt, sSubTypeCnt, sUmiSnp, sStrands, tagSeparator):
    # primer ID and direction
    umiSplit = umi.split(tagSeparator)
-   primerDirCode = umiSplit[1]
+   primerDirCode ='0'
    primerDirection = 'F' if primerDirCode == '0' else 'R' # 0 means the primer was priming the forward strand, 1 means priming the reverse strand
 
    # count number of reads in concordant/discordant with consensus for UMI efficiency metrics
