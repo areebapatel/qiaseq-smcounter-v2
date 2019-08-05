@@ -493,7 +493,7 @@ def pileupAndGroupByUmi(bamName, bamType, chrom, pos, repType, hpInfo, minBq, mi
       alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg = updateReadMetrics(pileupRead, base, bq, incCond, pairOrder, leftSp, umiSide, primerSide, alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg)
 
       # group reads by umis
-      allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, umiPairDict = groupByUmiFun(readid, umi, base, pairOrder, usedFrag, allFrag, incCond, hpCovered, allUmiDict, umiDictHq, umiDictHqBase, umiDictAll, concordPairCnt, discordPairCnt, umiPairDict, umiNoDupTag, dupTag)
+      allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, umiPairDict = groupByUmiFun(readid, umi, base, pairOrder, usedFrag, allFrag, incCond, hpCovered, allUmiDict, umiDictHq, umiDictHqBase, umiDictAll, concordPairCnt, discordPairCnt, umiPairDict, dupTag)
       
    # output variables
    return(alleleCnt, forwardCnt, reverseCnt, lowQReads, umiSideUmiEndPos, primerSideUmiEndPos, primerSidePrimerEndPos, cvg, allUmiDict, umiDictHq, umiDictAll, umiDictHqBase, concordPairCnt, discordPairCnt, allFrag, usedFrag, hqCache, infoCache, umiPairDict)
