@@ -8,6 +8,10 @@
 
 rm(list=ls())
 options(stringsAsFactors = F)
+suppressMessages(install.packages("plyr"))
+suppressMessages(install.packages("tidyverse"))
+suppressMessages(install.packages("magrittr"))
+suppressMessages(install.packages("data.table"))
 suppressMessages(library(plyr))
 suppressMessages(library(tidyverse))
 suppressMessages(library(magrittr))
