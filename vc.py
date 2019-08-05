@@ -462,11 +462,11 @@ def pileupAndGroupByUmi(bamName, bamType, chrom, pos, repType, hpInfo, minBq, mi
       pairOrder = 'R1' if pileupRead.alignment.is_read1 else 'R2'
       key = readid + '_' + pairOrder
       if key in infoCache:
-         umi, umiNoDupTag, dupTag, cigar, astart, aend = infoCache[key]
+         umi, dupTag, cigar, astart, aend = infoCache[key]
       else:
-         umi, umiNoDupTag, dupTag = getUmiFun(pileupRead, bamType, readid, umiTag, duplexTag)
+         umi, dupTag = getUmiFun(pileupRead, readid, duplexTag)
          cigar, astart, aend = getBasicInfo(pileupRead)
-         infoCache[key] = (umi, umiNoDupTag, dupTag, cigar, astart, aend)
+         infoCache[key] = (umi, dupTag, cigar, astart, aend)
 
       # check if read should be dropped
       if dropRead(pileupRead, pos, cigar):
