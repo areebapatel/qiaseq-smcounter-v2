@@ -1084,6 +1084,7 @@ def vc_wrapper(general_args, interval):
       chrom = interval[0][0]
       intervalStartPos = interval[0][1]
       intervalEndPos = interval[-1][1]
+      pos = int (intervalStartPos)
       
       # constants and functions to use depending on normal DNA-seq or duplex-seq
       if isDuplex:
