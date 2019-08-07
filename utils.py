@@ -13,7 +13,7 @@ def getMeanRpu(bamName, umiTag):
    allUmiSet = set()
 
    # fetch all reads
-   for read in samfile.fetch():
+   for read in samfile.fetch(until_eof=True):
       # read ID
       allFragSet.add(read.query_name)
       
